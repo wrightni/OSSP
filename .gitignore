@@ -101,4 +101,5 @@ ENV/
 
 # Mac stuff:
 .DS_Store
+init.sh
 
