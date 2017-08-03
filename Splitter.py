@@ -105,7 +105,7 @@ def split_image(input_path, image_name, image_type, output_path=None, number_of_
 
 		# Read the band information from the gdal dataset
 		band = dataset.GetRasterBand(b)
-		[band_min, band_max, band_mean, band_std] = band.ComputeStatistics(False)
+		# [band_min, band_max, band_mean, band_std] = band.ComputeStatistics(False)
 		band = np.array(band.ReadAsArray())
 
 		# Calculate the range of pixel values that we want to keep in the final image.
@@ -205,24 +205,26 @@ def split_image(input_path, image_name, image_type, output_path=None, number_of_
 		if image_type == 'pan' or image_type == 'wv02_ms':
 			max_bit = 2047	#While the images are 11bit, white ice tends to be ~600-800 intensity
 			upper_limit = 0.25
-			std_limit = 60
 		else:
 			max_bit = 255
 			upper_limit = 0.6
-			std_limit = 40 #(?)
 		min_range = int(max_bit*.08)
 		max_range = int(max_bit*upper_limit)
 
-		# print "p01: %i | p98: %i" %(p01_b,p98_b)
+		print num_peaks
 
-		if band_std < std_limit or num_peaks < 3:
+		if verbose: print "Stretching: %i to 0 and : %i to 255" %(p01_b,p98_b)
+
+		if verbose: print "min range: {0:0f} | max range: {1:0f}".format(min_range,max_range)
+
+		if num_peaks < 3:
 			if p01_b > min_range:
 				p01_b = min_range
 			if p98_b < max_range:
 				p98_b = max_range
 		## _______
 
-		if verbose: print "Stretching: %i to 0 and : %i to 255" %(p01_b,p98_b)
+		# if verbose: print "Stretching: %i to 0 and : %i to 255" %(p01_b,p98_b)
 
 		# In standard rgb imagery we want to scale each band by the min and max
 		# of all bands. Here we check the current p01 and p98 values against the
