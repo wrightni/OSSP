@@ -2,7 +2,7 @@
 ## Open Source Sea-ice Processing
 ### Open Source Algorithm for Detecting Sea Ice Surface Features in High Resolution Optical Imagery
 
-### Nicholas Wright and Christopher Polashenksi
+### Nicholas Wright and Christopher Polashenski
 
 ## INTRODUCTION
 
@@ -29,21 +29,21 @@ For detailed usage instructions, see the instructional document here: <>
 
 ### batch_process_mp.py
 
-This combines all steps of the image classification scheme into one script. This script finds all appropriately formatted files in the input directory (.tif and .jpg) and queues them for processing. For each image, this script processes them as follows: Image Subdivision (Splitter.py) -> Segmentation (Watershed.py) -> Classification (RandomForest.py) -> Calculate statistics -> Recompile classified splits. batch\_process_mp.py is able to utilize more than one core of the processor for the segmentation and classificaiton phases. 
+This combines all steps of the image classification scheme into one script. This script finds all appropriately formatted files in the input directory (.tif and .jpg) and queues them for processing. For each image, this script processes them as follows: Image Subdivision (Splitter.py) -> Segmentation (Watershed.py) -> Classification (RandomForest.py) -> Calculate statistics -> Recompile classified splits. batch\_process_mp.py is able to utilize more than one core of the processor for the segmentation and classification phases. 
 
-#### Required Arguements
+#### Required Arguments
 * __input directory__: directory containing all of the images you wish to process Note that all .jpg and .tif images in the input directory as well as all sub-directories of it will be processed.
 * __image type__: {‘srgb’, ‘wv02_ms’, ‘pan'}: the type of imagery you are processing. 
-a. 'srgb': RGB imagery taken by a typical camera
-b. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
-c. 'pan': High resolution panchromatic imagery
+  a. 'srgb': RGB imagery taken by a typical camera
+  b. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
+  c. 'pan': High resolution panchromatic imagery
 * __training dataset file__: complete filepath of the training dataset you wish to use to analyze the input imagery
 
-#### Optional Arguements
+#### Optional Arguments
 
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
 * __-p | --parallel__: The number of parallel processes to run (i.e. number of cpu cores to utilize). *Default = 1*. 
-* __--training_label__: The label of a custom training dataset. See advanced section for details. Default = *image\_type*.
+* __--training_label__: The label of a custom training dataset. See advanced section for details. *Default = image\_type*.
 
 #### Notes:
 
@@ -58,7 +58,7 @@ In general, images should be divided into parts small enough to easily load into
 
 This script reads in a raw image, stretches the pixel intensity values to the full 8-bit range, and subdivides the image into _s_ number of subimages. The output file is in hdf5 format, and is ready to be ready by Watershed.py. 
 
-#### Required Arguements
+#### Required Arguments
 * __input_dir__: Directory path of the input image
 * __filename__: Name of the image to be split
 * __image type__: {‘srgb’, ‘wv02_ms’, ‘pan'}: the type of imagery you are processing. 
@@ -66,7 +66,7 @@ a. 'srgb': RGB imagery taken by a typical camera
 b. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
 c. 'pan': High resolution panchromatic imagery
 
-#### Optional Arguements
+#### Optional Arguments
 
 * __--output_dir__: Directory path for output images.
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
@@ -75,7 +75,17 @@ c. 'pan': High resolution panchromatic imagery
 
 ### Watershed.py
 
+This script loads the output of Splitter.py, and segments the image using an edge detection followed by watershed segmentation.
+
+#### Required Arguments
+
+#### Optional Arguments
+
+
 ### RandomForest.py
 
 ### training_gui.py
+
+### Contact
+Nicholas Wright
 
