@@ -70,7 +70,7 @@ c. 'pan': High resolution panchromatic imagery
 
 * __--output_dir__: Directory path for output images.
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
-* __-v | --verbose__: Prints the progress of the script.
+* __-v | --verbose__: Display text information and progress of the script.
 
 
 ### Watershed.py
@@ -78,11 +78,26 @@ c. 'pan': High resolution panchromatic imagery
 This script loads the output of Splitter.py, and segments the image using an edge detection followed by watershed segmentation.
 
 #### Required Arguments
+*__input_dir__: Directory path of the input image.
+* __filename__: Name of the segmented image file (Splitter output: .h5).
 
 #### Optional Arguments
 
+*__--output_dir__: Directory path for output files.
+*__--histogram__: Display histogram of pixel intensity values before segmentation.
+*__-c | --color__: Save a color (rgb) version of the input image.
+*__-t | --test__: Inspect segmentation results results before saving output files. 
+*__-v | --verbose__: Display text information and progress of the script.
+
 
 ### RandomForest.py
+
+Classified the segmented image (output of Watershed.py) using a Random Forest machine learning algorithm. Training data can be created on a segmented image using the GUI in training_gui.py. 
+
+#### Required Arguments
+
+
+#### Optional Arguments
 
 ### training_gui.py
 
