@@ -211,8 +211,6 @@ def split_image(input_path, image_name, image_type, output_path=None, number_of_
 		min_range = int(max_bit*.08)
 		max_range = int(max_bit*upper_limit)
 
-		print num_peaks
-
 		if verbose: print "Stretching: %i to 0 and : %i to 255" %(p01_b,p98_b)
 
 		if verbose: print "min range: {0:0f} | max range: {1:0f}".format(min_range,max_range)
