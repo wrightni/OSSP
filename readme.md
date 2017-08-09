@@ -43,7 +43,7 @@ This combines all steps of the image classification scheme into one script. This
 
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
 * __-p | --parallel__: The number of parallel processes to run (i.e. number of cpu cores to utilize). *Default = 1*. 
-* __--training_label__: The label of a custom training dataset. See advanced section for details. *Default = image\_type*.
+* __--training\_label__: The label of a custom training dataset. See advanced section for details. *Default = image\_type*.
 
 #### Notes:
 
@@ -95,11 +95,17 @@ This script loads the output of Splitter.py, and segments the image using an edg
 Classified the segmented image (output of Watershed.py) using a Random Forest machine learning algorithm. Training data can be created on a segmented image using the GUI in training_gui.py. 
 
 #### Required Arguments
-
+*__input\_filename__: Directory and filename of image watersheds to be classified.
+*__training\_dataset__: Directory and filename of the training dataset (.h5)
+*__training\_label__: name of training classification list
 
 #### Optional Arguments
-
+*__-q | --quality__: Display a quality assessment (OOB score and attribute importance) of the training dataset.
+*__--debug__: Display one classified subimage at a time, with the option of quitting after each.
+*__-v | --verbose__: Display text information and progress of the script.
+  
 ### training_gui.py
+
 
 ### Contact
 Nicholas Wright
