@@ -6,7 +6,7 @@
 
 ## Introduction
 
-Welcome to OSSP; a set of tools for detecting surface features in high resolution optical imagery of sea ice. The primary focus is on the differentiation of open water, melt ponds, and snow/ice. 
+Welcome to OSSP; a set of tools for detecting surface features in high resolution optical imagery of sea ice. The primary focus is on the detection of and differentiation between open water, melt ponds, and snow/ice. 
 
 The Anaconda distribution of Python is recommended, but any distribution with the appropriate packages will work. You can download Anaconda, version 2.7, here: https://www.continuum.io/downloads
 
@@ -114,7 +114,7 @@ c. 'pan': High resolution panchromatic imagery
 * __-m | --mode__: {1,2}. How you would like to the training GUI. 1: create a training dataset from folder of raw images. 2: assess the accuracy of a classified image (output of RandomForest.py).
 
 #### Optional arguments:
-* __--tds_file__: Only used for mode 1. Existing training dataset file. Will create a new one with this name if none exists. *Default = <\image_type>\_training\_data.h5*.
+* __--tds_file__: Only used for mode 1. Existing training dataset file. Will create a new one with this name if none exists. *Default = <image_type>\_training\_data.h5*.
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
 
 ### Contact
