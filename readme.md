@@ -25,7 +25,7 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 
 ## Usage
 
-For detailed usage instructions, see the instructional document here: <>
+For detailed usage and installation instructions, see the pdf document 'Algorithm_Instructions.pdf'
 
 ### batch\_process_mp.py
 
@@ -34,9 +34,9 @@ This combines all steps of the image classification scheme into one script. This
 #### Required Arguments
 * __input directory__: directory containing all of the images you wish to process Note that all .jpg and .tif images in the input directory as well as all sub-directories of it will be processed.
 * __image type__: {‘srgb’, ‘wv02_ms’, ‘pan'}: the type of imagery you are processing. 
-  a. 'srgb': RGB imagery taken by a typical camera
-  b. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
-  c. 'pan': High resolution panchromatic imagery
+  1. 'srgb': RGB imagery taken by a typical camera
+  2. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery
+  3. 'pan': High resolution panchromatic imagery
 * __training dataset file__: complete filepath of the training dataset you wish to use to analyze the input imagery
 
 #### Optional Arguments
@@ -62,9 +62,9 @@ This script reads in a raw image, stretches the pixel intensity values to the fu
 * __input_dir__: Directory path of the input image
 * __filename__: Name of the image to be split
 * __image type__: {‘srgb’, ‘wv02_ms’, ‘pan'}: the type of imagery you are processing. 
-a. 'srgb': RGB imagery taken by a typical camera
-b. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
-c. 'pan': High resolution panchromatic imagery
+  1. 'srgb': RGB imagery taken by a typical camera
+  2. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
+  3. 'pan': High resolution panchromatic imagery
 
 #### Optional Arguments
 * __--output_dir__: Directory path for output images.
@@ -108,9 +108,9 @@ Classified the segmented image (output of Watershed.py) using a Random Forest ma
 #### Positional Arguments:
 * __input__: In mode 1 this is a folder containing the training images. In mode 2, the input is a classified image file (.h5).
 * __image type__: {‘srgb’, ‘wv02_ms’, ‘pan'}: the type of imagery you are processing. 
-a. 'srgb': RGB imagery taken by a typical camera
-b. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
-c. 'pan': High resolution panchromatic imagery
+  1. 'srgb': RGB imagery taken by a typical camera
+  2. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
+  3. 'pan': High resolution panchromatic imagery
 * __-m | --mode__: {1,2}. How you would like to the training GUI. 1: create a training dataset from folder of raw images. 2: assess the accuracy of a classified image (output of RandomForest.py).
 
 #### Optional arguments:
