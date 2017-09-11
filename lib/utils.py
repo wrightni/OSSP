@@ -32,8 +32,8 @@ def load_tds(file_name, list_name):
 	training_feature_matrix = training_feature_matrix.tolist()
 	# Remove feature lists that dont have an associated label
 	training_feature_matrix = training_feature_matrix[:len(label_vector)]
-	print "__"
-	print len(label_vector)
+	# print "__"
+	# print len(label_vector)
 	## Remove the segments labeled "unknown" (0)
 	while 0 in label_vector:
 		i = label_vector.index(0)
