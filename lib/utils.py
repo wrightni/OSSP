@@ -149,7 +149,6 @@ def stitch(image_files, save_path=None):
 	full_original = compile_subimages(original_list,box_side,box_side,num_bands)
 	# Stitch the classified image back together
 	full_classification = compile_subimages(classified_list,box_side,box_side)
-	full_classification[full_classification==3] = 2
 
 	if os.path.isdir(save_path):
 		output_name = os.path.join(save_path, os.path.split(image_files[0])[1][:-18])
