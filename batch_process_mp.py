@@ -54,23 +54,11 @@ def main():
 	#### Process images in the given directory.
 	#		Expected filestructure: all images in date specific folder
 
-	# List of directories in the root
-	dates = next(os.walk(root_dir))[1]
-
 	for path, directories, files in os.walk(root_dir):
 
 		utils.remove_hidden(directories)
 		utils.remove_hidden(files)
-
-	# Loop through each date folder in the base bath	
-	# for date in dates:	
-
-		# current_dir = os.path.join(root_dir, date)
-		# split_dir = os.path.join(current_dir, 'splits')
-		# folder_contents = os.listdir(current_dir)
-
-		# current_dir = path
-				
+		
 		#### Split Each .tif
 
 		# Loop through contents in the date directory
