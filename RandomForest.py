@@ -246,10 +246,7 @@ def process(input_filename, training_dataset, output_filepath=False, quality_con
 			input_feature_matrix = feature_calculations.analyze_ms_image(cur_image, cur_ws)
 		elif im_type == 'srgb':
 			entropy_image = entropy(bytescale(cur_image[:,:,0]), disk(4))
-			t1 = time.clock()
 			input_feature_matrix = feature_calculations.analyze_srgb_image(cur_image, cur_ws, entropy_image)
-			t2 = time.clock() - t1
-			print "Time elapsed: {0}".format(t2)
 		elif im_type == 'pan':
 			entropy_image = entropy(bytescale(cur_image), disk(4))
 			input_feature_matrix = feature_calculations.analyze_pan_image(cur_image, cur_ws, entropy_image, im_date)
