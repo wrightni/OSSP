@@ -20,6 +20,8 @@ import matplotlib.colors as colors
 import matplotlib.image as mimg
 from lib import utils
 
+from skimage.future import graph
+
 
 class Subimage:
 	'''
@@ -83,13 +85,14 @@ class Subimage:
 
 			#Create a gradient image using a sobel filter
 			self.sobel_image = filters.sobel(self.main_band)
+			# sobel_copy = np.copy(self.sobel_image)
 
 			upper_threshold = np.amax(self.sobel_image)/amplification_factor
 			if upper_threshold < 0.20:
 				upper_threshold = 0.20
 			self.sobel_image = exposure.rescale_intensity(self.sobel_image, in_range=(0,upper_threshold), out_range=(0,1))
-
-			# gauss_im = ndimage.gaussian_filter(self.main_band,2)
+			
+			# self.sobel_image = ndimage.gaussian_filter(self.sobel_image,2)
 			# edge_im = feature.canny(self.main_band, sigma=1)
 
 			# Prevents the watersheds from 'leaking' along the sides of the image
@@ -99,13 +102,16 @@ class Subimage:
 			self.sobel_image[-1,:] = 1
 
 			# Set all values in the sobel image that are lower than the 
-			# given threshold to zero. 
-			self.sobel_image[self.sobel_image<=sobel_threshold]=0
+			# given threshold to zero.
+			sobel_copy = np.copy(self.sobel_image)
+			# sobel_copy[sobel_copy<=sobel_threshold]=0
+
+			# self.sobel_image[self.sobel_image<=0.05]=0
 
 			# Find local minimum values in the sobel image by inverting
 			# sobel_image and finding the local maximum values
-			inv_sobel = 1-self.sobel_image
-			local_min = feature.peak_local_max(inv_sobel,min_distance=3, indices=False)
+			inv_sobel = 1-sobel_copy
+			local_min = feature.peak_local_max(inv_sobel, min_distance=3, indices=False, num_peaks_per_label=1)
 			markers = ndimage.label(local_min)[0]
 
 			# Build a watershed from the markers on top of the edge image
@@ -115,6 +121,15 @@ class Subimage:
 			# Set all values outside of the image area (empty pixels, usually caused by
 			# orthorectification) to one value, at the end of the watershed list.
 			self.watershed[self.empty_pixels]=np.amax(self.watershed)+1
+			# self.sobel_image[local_min] = 1
+
+			# Recombine segments that are adjacent and similar to eachother. 
+			# Created a region adjacency graph
+			color_im = create_composite(self.main_band,self.get_alternate_band(1),self.get_alternate_band(2))
+			im_graph = graph.rag_mean_color(color_im,self.watershed)
+
+			# Combine segments that are adjacent and whose pixel intensity difference is less than 10. 
+			self.watershed = graph.cut_threshold(self.watershed,im_graph,10.0)			
 
 		else:
 			# print ":("
@@ -123,9 +138,11 @@ class Subimage:
 	#Plots a watershed image on top of and beside the original image
 	def display_watershed(self):
 
+		print np.amax(self.watershed)
 		ws_bound = segmentation.find_boundaries(self.watershed)
 
 		ws_display = create_composite(self.main_band,self.main_band,self.main_band)
+		# ws_display = create_composite(self.sobel_image*255,self.sobel_image*255,self.sobel_image*255)
 		ws_display[:,:,0][ws_bound] = 98
 		ws_display[:,:,1][ws_bound] = 202
 		ws_display[:,:,2][ws_bound] = 202
@@ -135,7 +152,7 @@ class Subimage:
 		fig, axes = plt.subplots(1,3,subplot_kw={'xticks':[], 'yticks':[]})
 		fig.subplots_adjust(hspace=0.3,wspace=0.05)
 
-		axes[1].imshow(self.sobel_image,interpolation='none')
+		axes[1].imshow(self.sobel_image,interpolation='none',cmap='gray')
 		axes[0].imshow(display_im,interpolation='none')
 		# axes[2].imshow(ws_display,interpolation='none')
 
