@@ -114,7 +114,6 @@ def analyze_srgb_image(input_image, watershed_image, entropy_image, segment_id=F
 		num_ws = int(np.amax(watershed_image)+1)
 	else:
 		num_ws = 1
-	print num_ws
 
 	for ws in range(num_ws):
 
