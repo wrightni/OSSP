@@ -18,7 +18,7 @@ import warnings
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.image as mimg
