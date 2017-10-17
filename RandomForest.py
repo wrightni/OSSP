@@ -291,22 +291,13 @@ def process(input_filename, training_dataset, output_filepath=False, quality_con
 		print "Done. "
 		print "Time elapsed: {0}".format(elapsed_time)
 
+	# Lite version: Save only the classified output, and do not save the original image data
 	compiled_classified = utils.compile_subimages(classified_image, num_x_subimages, num_y_subimages, 1)
-	if im_type == 'wv02_ms':
-		compiled_original = utils.compile_subimages(input_image, num_x_subimages, num_y_subimages, 8)
-	elif im_type == 'srgb':
-		compiled_original = utils.compile_subimages(input_image, num_x_subimages, num_y_subimages, 3)
-	elif im_type == 'pan': 
-		compiled_original = utils.compile_subimages(input_image, num_x_subimages, num_y_subimages, 1)
 
 	if verbose: print "Saving..."
-
-	classified_image_path = os.path.join(output_filepath, output_filename + '_classified_image.png')
-	utils.save_color(compiled_classified, classified_image_path)
 	
 	with h5py.File(os.path.join(output_filepath, output_filename + '_classified.h5'),'w') as outfile:
 		outfile.create_dataset('classified', data=compiled_classified,compression='gzip',compression_opts=9)
-		outfile.create_dataset('original', data=compiled_original ,compression='gzip',compression_opts=9)
 
 	#### Count the number of pixels that were in each classification category. 
 	sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow = utils.count_features(compiled_classified)
