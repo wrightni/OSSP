@@ -132,8 +132,6 @@ def stitch(image_files, save_path=None):
 	## Read the classified data and the original image data
 	for image in image_files:
 		with h5py.File(image,'r') as inputfile:
-			original_image = inputfile['original'][:]
-			original_list.append(original_image)
 			classified_image = inputfile['classified'][:]
 			classified_list.append(classified_image)
 
@@ -152,16 +150,13 @@ def stitch(image_files, save_path=None):
 
 	if os.path.isdir(save_path):
 		output_name = os.path.join(save_path, os.path.split(image_files[0])[1][:-18])
-		save_color(full_classification, output_name + "_classified_image.png")
 		fout = h5py.File(output_name + "_classified.h5",'w')
 		fout.create_dataset('classified',data=full_classification,compression='gzip',compression_opts=9)
-		fout.create_dataset('original',data=full_original,compression='gzip',compression_opts=9)
 		fout.close()
 	else:
 		save_color(full_classification, image_files[0][:-18] + "_classified_image.png")
 		fout = h5py.File(image_files[0][:-18] + "_classified.h5",'w')
 		fout.create_dataset('classified',data=full_classification,compression='gzip',compression_opts=9)
-		fout.create_dataset('original',data=full_original,compression='gzip',compression_opts=9)
 		fout.close()
 
 	return full_classification
