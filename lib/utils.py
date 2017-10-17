@@ -124,7 +124,6 @@ def stitch(image_files, save_path=None):
 		print "Incomplete set of images!"
 		return None
 
-	original_list = []
 	classified_list = []
 
 	image_files.sort()
@@ -138,13 +137,7 @@ def stitch(image_files, save_path=None):
 
 	# Find the right dimensions for stitching the images back together
 	box_side = int(math.sqrt(len(classified_list)))
-	# Get the number of bands based on the input list
-	try: 
-		num_bands = np.shape(original_list)[3]
-	except IndexError:
-		num_bands = 1
-	# Stitch the original back together
-	full_original = compile_subimages(original_list,box_side,box_side,num_bands)
+
 	# Stitch the classified image back together
 	full_classification = compile_subimages(classified_list,box_side,box_side)
 
