@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.image as mimg
 
+#
+valid_extensions = ['.tif','.tiff','.jpg']
 
 class Task:
 
@@ -86,8 +88,6 @@ class Task:
 
 
 def create_task_list(src_dir, dst_dir, num_splits):
-
-    valid_extensions = ['.tif','.tiff','.jpg']
 
     task_list = []
     # If the input is a file, return that file as the only task
@@ -223,10 +223,10 @@ def load_tds(file_name, list_name):
         training_feature_matrix.pop(i)
 
     ## Remove the segments labeled "Shadow" (0)
-    while 5 in label_vector:
-        i = label_vector.index(5)
-        label_vector.pop(i)
-        training_feature_matrix.pop(i)
+    # while 5 in label_vector:
+    #     i = label_vector.index(5)
+    #     label_vector.pop(i)
+    #     training_feature_matrix.pop(i)
 
     # Combine the label vector and training feature matrix into one variable. 
     tds = [label_vector,training_feature_matrix]
@@ -462,7 +462,7 @@ def count_features(classified_image):
 def get_image_paths(folder,keyword='.h5'):
     return (os.path.join(folder, f)
         for f in os.listdir(folder)
-        if keyword in f)
+        if keyword in f.lower())
 
 # Remove hidden folders and files from the given list of strings (mac)
 def remove_hidden(folder):
