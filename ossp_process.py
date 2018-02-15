@@ -159,7 +159,8 @@ def main():
                               %(subtask, time.clock() - seg_time))
 
             ###
-            # display_watershed(image_data, segmented_blocks)
+            # from lib import debug_tools
+            # debug_tools.display_watershed(image_data, segmented_blocks)
             # quit()
             ####
 
@@ -195,6 +196,22 @@ def main():
             #   if there are no subtasks. 
             task.update_subtask(subtask)
 
+
+        ####
+        # from lib import debug_tools
+        # while True:
+        #     blk = raw_input("Enter block number: ")
+        #     if blk == 'n':
+        #         break
+        #     else:
+        #         blk = int(blk)
+        #     im = image_data[1][blk]
+        #     seg_im = segmented_blocks[blk]
+        #     clsf_im = classified_blocks[blk]
+        #     debug_tools.display_image(im,seg_im,clsf_im,1)
+
+
+        ####
         # Write the total pixel counts to the database (or csv)
         utils.write_to_csv(os.path.join(dst_dir,task.get_id()), dst_dir, subtask, 
                          pixel_counts)
@@ -211,6 +228,7 @@ def main():
 
         #### Compile the split images back into a single image
         if verbose: print("Recompiling: %s" %task.get_id())
+        image_name = os.path.splitext(image_name)[0]
 
         # Create a sorted list of the tasks. Then create the correct filename
         #   for each split saved on the drive.
@@ -236,35 +254,6 @@ def main():
             shutil.rmtree(working_dir)
 
         if verbose: print("Done")
-
-
-
-# Plots a watershed image on top of and beside the original image
-## Used for debugging
-def display_watershed(original_data, watershed_data):
-
-    block = 5
-    watershed = watershed_data[block]
-    original_1 = original_data[1][block]
-    original_2 = original_data[2][block]
-    original_3 = original_data[3][block]
-
-    # randcolor = colors.ListedColormap(np.random.rand(256,3))
-    ws_bound = segmentation.find_boundaries(watershed)
-    ws_display = utils.create_composite([original_1,original_2,original_3])
-    ws_display[:,:,0][ws_bound] = 98
-    ws_display[:,:,1][ws_bound] = 202
-    ws_display[:,:,2][ws_bound] = 202
-
-    display_im = utils.create_composite([original_1,original_2,original_3])
-
-    fig, axes = plt.subplots(1,2,subplot_kw={'xticks':[], 'yticks':[]})
-    fig.subplots_adjust(hspace=0.3,wspace=0.05)
-
-    # axes[1].imshow(self.sobel_image,interpolation='none',cmap='gray')
-    axes[0].imshow(display_im,interpolation='none')
-    axes[1].imshow(ws_display,interpolation='none')
-    plt.show()
 
 
 if __name__ == "__main__":
