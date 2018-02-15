@@ -21,7 +21,7 @@ from lib import utils
 
 
 def segment_image(input_data, image_type=False, test_check=False, threads=2,
-                  write_results=False, verbose=False):
+                  write_results=False, dst_file=False, verbose=False):
     '''
     Wrapper function that handles all of the processing to create watersheds
     '''
@@ -309,7 +309,7 @@ def write_to_hdf5(watershed_data, dst_file):
             pass
  
 
-def check_results(subimage_list):        
+def check_results(subimage_list):
 
     choice = raw_input("Display subimage/wsimage pair? (y/n): ")
     if choice == 'y':
