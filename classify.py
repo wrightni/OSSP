@@ -321,7 +321,7 @@ def create_clsf_raster(prediction, watershed_block, image_block):
     clsf_block[image_block==0] = 0
 
     # Shadow is being reassigned to ice and snow. 
-    clsf_block[clsf_block==5] = 1
+    # clsf_block[clsf_block==5] = 1
 
     return clsf_block
 
@@ -355,61 +355,6 @@ def neighbor_pixels(image_block, index):
     pixel_average = np.average(pixel_values)
     return pixel_average
 
-
-def display_image(raw,watershed,classified,type):
-
-    # Save a color 
-    empty_color = [.1,.1,.1]        #Almost black
-    snow_color = [.9,.9,.9]         #Almost white
-    pond_color = [.31,.431,.647]    #Blue
-    gray_color = [.65,.65,.65]          #Gray
-    water_color = [0.,0.,0.]        #Black
-    shadow_color = [.100, .545, .0]#Orange
-
-    custom_colormap = [empty_color,snow_color,gray_color,pond_color,water_color,shadow_color]
-    custom_colormap = colors.ListedColormap(custom_colormap)
-
-    #Making sure there is atleast one of every pixel so the colors map properly (only changes
-    # display image, not saved data)
-    classified[0][0] = 0
-    classified[1][0] = 1
-    classified[2][0] = 2
-    classified[3][0] = 3
-    classified[4][0] = 4
-    classified[5][0] = 5
-
-    # Creating the watershed display image with borders highlighted
-    ws_bound = segmentation.find_boundaries(watershed)
-    ws_display = create_composite([raw,raw,raw])
-    ws_display[:,:,0][ws_bound] = 255
-    ws_display[:,:,1][ws_bound] = 255
-    ws_display[:,:,2][ws_bound] = 22
-    
-    # Figure that show 3 images: raw, segmented, and classified
-    if type == 1:
-        fig, axes = plt.subplots(1,3,subplot_kw={'xticks':[], 'yticks':[]})
-        fig.subplots_adjust(left=0.05,right=0.99,bottom=0.05,top=0.90,wspace=0.02,hspace=0.2)
-
-        tnrfont = {'fontname':'Times New Roman'}
-
-        axes[0].imshow(raw,cmap='gray',interpolation='None')
-        axes[0].set_title("Raw Image", **tnrfont)
-        axes[1].imshow(ws_display,interpolation='None')
-        axes[1].set_title("Image Segments", **tnrfont)
-        axes[2].imshow(classified,cmap=custom_colormap,interpolation='None')
-        axes[2].set_title("Classification Output", **tnrfont)
-
-    # Figure that shows 2 images: raw and classified. 
-    if type == 2:
-        fig, axes = plt.subplots(1,2,subplot_kw={'xticks':[], 'yticks':[]})
-        fig.subplots_adjust(hspace=0.3,wspace=0.05)
-
-        axes[0].imshow(raw,cmap='gray',interpolation='None')
-        axes[0].set_title("Raw Image")
-        axes[1].imshow(classified,cmap=custom_colormap,interpolation='None')
-        axes[1].set_title("Classification Output")
-
-    plt.show()
 
 # Method to assess the training set and classification tree used for this classification
 def test_training(label_vector, training_feature_matrix):
