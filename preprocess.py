@@ -96,10 +96,10 @@ def prepare_image(input_path, image_name, image_type,
 
     #### Verify output directory
     # If no output directory was provided, default to input_dir/splits
-    if output_path == None:
+    if output_path == None and number_of_splits > 1:
         output_path = os.path.join(input_path,"splits")
     # If the output path doesnt already exist, create that directory
-    if not os.path.isdir(output_path) and number_of_splits > 1:
+    if not os.path.isdir(output_path) and output_path is not None:
         os.makedirs(output_path)
 
     #### Splits and Grid Image
@@ -139,6 +139,7 @@ def prepare_image(input_path, image_name, image_type,
             if upper_b > upper or upper == -1:
                 upper = upper_b
             srgb_bands.append(band)
+            #display_histogram(band)
 
         # Close the gdal dataset
         dataset = None
@@ -162,6 +163,13 @@ def prepare_image(input_path, image_name, image_type,
                                                         block_cols,
                                                         block_rows,
                                                         [split_rows,split_cols])
+                if output_path != None:
+                    # Custom name for training set gui...
+                    fname = os.path.splitext(image_name)[0] + "_segmented.h5"
+                    dst_file = os.path.join(output_path, fname)
+                    # Save the data to disk
+                    write_to_hdf5(dst_file, srgb_bands_output[b], b, image_type, 
+                                  image_date, dimensions)
             else:
                 if verbose: print "Splitting band %s..." %b
                 # Divide the data into a list of splits
@@ -187,6 +195,13 @@ def prepare_image(input_path, image_name, image_type,
                     snum += 1
                 if verbose: print "Band %s complete" %b
         meta_data = [dimensions, image_date]
+        ##
+        fname = (os.path.splitext(image_name)[0] + ".png")
+        color_file = os.path.join(input_path, fname)
+        save_color_image(srgb_bands_output, color_file, image_type, 
+                         dimensions[0], dimensions[1])
+        ##
+
         return srgb_bands_output, meta_data
 
     ## For WV02_MS and Pan Images
@@ -443,7 +458,7 @@ def find_threshold(hist, bin_centers, peaks, image_type):
     # 8 bit vs 11 bit (WorldView)
     # 256   or 2048
     # While WV images are 11bit, white ice tends to be ~600-800 intensity
-
+    # Provide a floor and ceiling to the amount of stretch allowed
     if len(peaks) < 3:
         if image_type == 'pan' or image_type == 'wv02_ms':
             max_bit = 2047
@@ -452,12 +467,14 @@ def find_threshold(hist, bin_centers, peaks, image_type):
             max_bit = 255
             upper_limit = 0.6
         min_range = int(max_bit*.08)
-        max_range = int(max_bit*upper_limit)
-        # Provide a floor and ceiling to the amount of stretch allowed
         if lower > min_range:
             lower = min_range
-        if upper < max_range:
-            upper = max_range
+    # If there are at least 2 peaks we don't need an upper limit, as the upper
+    #   limit is only to prevent open water only images from being stretched.
+        if len(peaks) < 2:
+            max_range = int(max_bit*upper_limit)
+            if upper < max_range:
+                upper = max_range
 
     return lower, upper
 
@@ -571,7 +588,7 @@ def save_color_image(image_data, output_name, image_type, block_cols, block_rows
         holder.append(utils.create_composite([
             red_band[i], green_band[i], blue_band[i]]))
 
-    colorfullimg = utils.compile_subimages(holder, 2, 2, 3)
+    colorfullimg = utils.compile_subimages(holder, block_cols, block_rows, 3)
     mimg.imsave(output_name,colorfullimg)
     colorfullimg = None
 
