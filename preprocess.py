@@ -99,8 +99,9 @@ def prepare_image(input_path, image_name, image_type,
     if output_path == None and number_of_splits > 1:
         output_path = os.path.join(input_path,"splits")
     # If the output path doesnt already exist, create that directory
-    if not os.path.isdir(output_path) and output_path is not None:
-        os.makedirs(output_path)
+    if output_path != None:
+        if not os.path.isdir(output_path): 
+            os.makedirs(output_path)
 
     #### Splits and Grid Image
     # Splits the image into number_of_split parts, and divides each split into
