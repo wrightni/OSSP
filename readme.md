@@ -48,7 +48,6 @@ This combines all steps of the image classification scheme into one script. This
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 1*.
 * __-p | --parallel__: The number of parallel processes to run (i.e. number of cpu cores to utilize). *Default = 1*. 
 * __--training\_label__: The label of a custom training dataset. See advanced section for details. *Default = image\_type*.
-* __-e | --extended\_output__: 
 
 #### Notes:
 
