@@ -261,8 +261,9 @@ def main():
                              os.path.join(dst_dir,image_name)+'.png')
 
         ### Remove temp folders?
-        if os.path.isdir(working_dir):
-            shutil.rmtree(working_dir)
+        if working_dir != None:
+            if os.path.isdir(working_dir):
+                shutil.rmtree(working_dir)
 
         if verbose: print("Done")
 
