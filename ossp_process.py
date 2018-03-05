@@ -102,7 +102,7 @@ def main():
     #    num_threads = multiprocessing.cpu_count()-1
 
     # Directory where temporary files are saved
-    if number_of_splits > 1 or extended_output is True:
+    if num_splits > 1 or extended_output is True:
         working_dir = os.path.join(src_dir, 'splits')
     else:
         working_dir = None
