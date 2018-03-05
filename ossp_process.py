@@ -53,11 +53,15 @@ def main():
     parser.add_argument("-s", "--splits", metavar='int', type=int, default=1,
                         help="number of subdividing splits to preform on raw image")
     parser.add_argument("-p", "--parallel", metavar='int', type=int, default=1,
-                        help='''number of parallel processes to run. 
-                        It is typically prudent to leave at least 1 core unused. 
-                        Beware of memory usage requirements for each process.''')
+                        help='''number of processing threads to create.''')
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="display text information and progress")
+    parser.add_argument("-e", "--extended_output", action="store_true",
+                        help='''Save additional data:
+                                    1) classified image (png)
+                                    2) classified results (csv)
+                                    3) segmented image (h5)
+                        ''')
 
     #### Parse Arguments
     args = parser.parse_args()
@@ -91,13 +95,17 @@ def main():
     num_splits = args.splits
     num_threads = args.parallel
     verbose = args.verbose
+    extended_output = args.extended_output
 
     # Make sure the user doesn't try to use more cores than they have. 
-    if num_threads > multiprocessing.cpu_count():
-        num_threads = multiprocessing.cpu_count()-1
+    #if num_threads > multiprocessing.cpu_count():
+    #    num_threads = multiprocessing.cpu_count()-1
 
     # Directory where temporary files are saved
-    working_dir = os.path.join(src_dir, 'splits')
+    if number_of_splits > 1 or extended_output is True:
+        working_dir = os.path.join(src_dir, 'splits')
+    else:
+        working_dir = None
 
     ### Prepare a list of images to be processed based on the user input
     # List of task objects based on the files in the input directory
@@ -213,8 +221,9 @@ def main():
 
         ####
         # Write the total pixel counts to the database (or csv)
-        utils.write_to_csv(os.path.join(dst_dir,task.get_id()), dst_dir, subtask, 
-                         pixel_counts)
+        if extended_output:
+            utils.write_to_csv(os.path.join(dst_dir,task.get_id()), dst_dir, 
+                                subtask, pixel_counts)
 
         ## Writing the results to a sqlite database. (Only works for 
         #   a specific database structure that has already been created)
@@ -240,12 +249,14 @@ def main():
             for task_id in task_list:
                 cname = os.path.join(working_dir, task_id) + "_classified.h5"
                 clsf_splits.append(cname)
-            utils.stitch(clsf_splits, save_path=dst_dir)
+            classified_image = utils.stitch(clsf_splits, save_path=dst_dir)
         else:
             with h5py.File(os.path.join(dst_dir,image_name)+'_classified.h5', 'w') as f:
                 f.create_dataset('classified',data=clsf_split,
                                  compression='gzip',compression_opts=9)
-            # Save color image for viewing
+                f.attrs.create("pixel_counts",pixel_counts)
+        # Save color image for viewing
+        if extended_output:
             utils.save_color(classified_image, 
                              os.path.join(dst_dir,image_name)+'.png')
 
