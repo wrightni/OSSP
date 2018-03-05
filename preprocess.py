@@ -195,11 +195,12 @@ def prepare_image(input_path, image_name, image_type,
                     snum += 1
                 if verbose: print "Band %s complete" %b
         meta_data = [dimensions, image_date]
-        ##
-        fname = (os.path.splitext(image_name)[0] + ".png")
-        color_file = os.path.join(input_path, fname)
-        save_color_image(srgb_bands_output, color_file, image_type, 
-                         dimensions[0], dimensions[1])
+        
+        ## Use to save a copy of the preprocessed image:
+        # fname = (os.path.splitext(image_name)[0] + ".png")
+        # color_file = os.path.join(input_path, fname)
+        # save_color_image(srgb_bands_output, color_file, image_type, 
+        #                  dimensions[0], dimensions[1])
         ##
 
         return srgb_bands_output, meta_data
