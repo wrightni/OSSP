@@ -223,10 +223,12 @@ def load_tds(file_name, list_name):
         training_feature_matrix.pop(i)
 
     ## Remove the segments labeled "Shadow" (0)
-    # while 5 in label_vector:
-    #     i = label_vector.index(5)
-    #     label_vector.pop(i)
-    #     training_feature_matrix.pop(i)
+    x = 0
+    while 5 in label_vector:
+        i = label_vector.index(5)
+        label_vector.pop(i)
+        training_feature_matrix.pop(i)
+        x+=1
 
     # Combine the label vector and training feature matrix into one variable. 
     tds = [label_vector,training_feature_matrix]
