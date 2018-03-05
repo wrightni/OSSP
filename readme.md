@@ -42,10 +42,13 @@ This combines all steps of the image classification scheme into one script. This
 
 #### Optional Arguments
 
+* __-o | --output_dir__: Directory to write output files. 
 * __-v | --verbose__: Display text output as algorithm progresses. 
-* __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
+* __-e | --extended\_output__: Option to include extra output to be written to disk. A .png of the classified image, a .csv of the results, and a .h5 containing the image segments will be written. The .h5 is used for training set creation.
+* __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 1*.
 * __-p | --parallel__: The number of parallel processes to run (i.e. number of cpu cores to utilize). *Default = 1*. 
 * __--training\_label__: The label of a custom training dataset. See advanced section for details. *Default = image\_type*.
+* __-e | --extended\_output__: 
 
 #### Notes:
 
