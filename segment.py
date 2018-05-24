@@ -16,6 +16,7 @@ from scipy import ndimage
 import matplotlib.pyplot as plt
 
 from lib import utils
+from lib import debug_tools
 
 # tqdm for progress bar
 
@@ -66,13 +67,14 @@ def segment_image(input_data, image_type=False, test_check=False, threads=2,
         amplification_factor = 2.
         band_list = [1,1,1]
     elif image_type == 'wv02_ms':
-        sobel_threshold = 0.1
-        amplification_factor = 2.
+        sobel_threshold = 0.0
+        amplification_factor = 3
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.1
         amplification_factor = 3.
         band_list = [3,2,1]
+
 
     #### Segment each image block
     # segmnt_block_queue is a queue that stores the result of the watershed
@@ -81,6 +83,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=2,
     num_blocks = len(im_block_dict[1])
     block_queue = construct_block_queue(im_block_dict, band_list, num_blocks)
     # im_block_dict = None
+
     
     # Define the number of threads to create
     NUMBER_OF_PROCESSES = threads
@@ -108,11 +111,11 @@ def segment_image(input_data, image_type=False, test_check=False, threads=2,
             pbar = tqdm(total=num_blocks, unit='block')
 
     # Each process adds the output values to segmnt_block_queue when it 
-    #   finishes a row. Adds 'None' when there are not more rows left 
+    #   finishes a row. Adds 'None' when there are no more rows left 
     #   in the queue. 
     # This loop continues as long as all of the processes have not finished
     #   (i.e. fewer than NUMBER_OF_PROCESSES have returned None). When a row is 
-    #   added to the queue, the tqdm progress bar updates.
+    #   added to the output list, the tqdm progress bar updates.
 
     # Initialize the output dataset as an empty list of length = input dataset
     #   This needs to be initialized since blocks will be added non-sequentially
@@ -138,6 +141,8 @@ def segment_image(input_data, image_type=False, test_check=False, threads=2,
     for proc in block_procs:
         proc.join()
 
+    while test_check:
+        test_check = check_results(im_block_dict,segmnt_block_list)
     # print np.shape(segmnt_block_list)
     if write_results:
         write_to_hdf5(segmnt_block_list, dst_file)
@@ -208,14 +213,14 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
 
     # Set all values in the sobel image that are lower than the 
     #   given threshold to zero.
-    # self.sobel_image[self.sobel_image<=sobel_threshold]=0
+    sobel_image[sobel_image<=sobel_threshold]=0
 
     #sobel_copy = np.copy(sobel_image)
 
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
     inv_sobel = 1-sobel_image
-    local_min = feature.peak_local_max(inv_sobel, min_distance=3, 
+    local_min = feature.peak_local_max(inv_sobel, min_distance=2, 
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
 
@@ -249,7 +254,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         color_im = None
         # Combine segments that are adjacent and whose pixel intensity 
         #   difference is less than 10. 
-        im_watersheds = graph.cut_threshold(im_watersheds,im_graph,10.0)
+        im_watersheds = graph.cut_threshold(im_watersheds,im_graph,5.0)
 
     return im_watersheds
 
@@ -288,6 +293,7 @@ def load_from_disk(hdf5_file, verbose):
             dataset_name = 'original_' + str(b)
             band = f[dataset_name][:]
             all_band_blocks[b] = band
+            # debug_tools.display_histogram(band[40])
 
     if verbose: 
         elapsed_time = time.clock() - start_time    
@@ -309,14 +315,16 @@ def write_to_hdf5(watershed_data, dst_file):
             pass
  
 
-def check_results(subimage_list):
+def check_results(optic_subimage_dict, ws_subimage_list):
 
     choice = raw_input("Display subimage/wsimage pair? (y/n): ")
     if choice == 'y':
-        selection = int(raw_input("Choose image (0," +str(len(subimage_list)-1) + "): "))
-        if selection >= 0 and selection < len(subimage_list)-1:
-            subimage = subimage_list[selection]
-            subimage_list[selection].display_watershed()
+        selection = int(raw_input("Choose image (0," +str(len(ws_subimage_list)-1) + "): "))
+        if selection >= 0 and selection < len(ws_subimage_list)-1:
+            debug_tools.display_watershed(optic_subimage_dict,
+                                          ws_subimage_list,
+                                          block=selection)
+            # subimage_list[selection].display_watershed()
         else:
             print "Invalid subimage index."
         test_check = True
@@ -356,6 +364,8 @@ def main():
                         help="directory containing a folder of image splits in .h5 format")
     parser.add_argument("filename",
                         help="name of image split")
+    parser.add_argument("-p", "--parallel", metavar='int', type=int, default=1,
+                        help='''number of processing threads to create.''')
     parser.add_argument("-w", "--write", action="store_true",
                         help="write the segmented image data to the input file")
     parser.add_argument("-t", "--test", action="store_true",
@@ -367,6 +377,7 @@ def main():
     args = parser.parse_args()
     src_path = os.path.abspath(args.input_dir)
     image_name = args.filename
+    parallel = args.parallel
     write_results = args.write
     test_check = args.test
     verbose = args.verbose
@@ -374,7 +385,8 @@ def main():
     # Combine image name and filepath
     image_path = os.path.join(src_path, image_name)
 
-    segment_image(image_path, test_check, write_results, verbose)
+    segment_image(image_path, test_check=test_check, threads=parallel,
+                  write_results=write_results, dst_file=src_path, verbose=verbose)
 
 if __name__ == "__main__":
     main()
