@@ -478,10 +478,10 @@ def remove_hidden(folder):
 # Combines multiple bands (RBG) into one 3D array
 # Adapted from:  http://gis.stackexchange.com/questions/120951/merging-multiple-16-bit-image-bands-to-create-a-true-color-tiff
 # Useful band combinations: http://c-agg.org/cm_vault/files/docs/WorldView_band_combs__2_.pdf
-def create_composite(band_list):
+def create_composite(band_list, dtype=np.uint8):
     img_dim = np.shape(band_list[0])
     num_bands = len(band_list)
-    img = np.zeros((img_dim[0], img_dim[1], num_bands), dtype=np.uint8)
+    img = np.zeros((img_dim[0], img_dim[1], num_bands), dtype=dtype)
     for i in range(num_bands):
         img[:,:,i] = band_list[i]
     
