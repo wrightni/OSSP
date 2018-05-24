@@ -854,11 +854,25 @@ if __name__ == "__main__":
                 original_image = []
                 original_image_dict, im_type = load_from_disk(h5_file,False)
                 for sub_image in range(len(original_image_dict[1])):
-                    original_image.append(
-                        utils.create_composite([original_image_dict[1][sub_image],
-                                                original_image_dict[2][sub_image],
-                                                original_image_dict[3][sub_image]])
-                        )
+                    # Create a list of image blocks based on the number of bands
+                    # in the input image.
+                    if im_type == 'wv02_ms':
+                        original_image.append(
+                            utils.create_composite([original_image_dict[1][sub_image],
+                                                    original_image_dict[2][sub_image],
+                                                    original_image_dict[3][sub_image],
+                                                    original_image_dict[4][sub_image],
+                                                    original_image_dict[5][sub_image],
+                                                    original_image_dict[6][sub_image],
+                                                    original_image_dict[7][sub_image],
+                                                    original_image_dict[8][sub_image]])
+                                             )
+                    if im_type == 'srgb':
+                        original_image.append(
+                            utils.create_composite([original_image_dict[1][sub_image],
+                                                    original_image_dict[2][sub_image],
+                                                    original_image_dict[3][sub_image]])
+                                             )
                 # original_image = utils.create_composite([original_image[1],
                 #                                         original_image[2],
                 #                                         original_image[3]])
@@ -868,6 +882,8 @@ if __name__ == "__main__":
                     watershed_image = f['watershed'][:]
 
                 print image_name
+                # print np.shape(original_image)
+                # quit()
                 #### Initializing the GUI
                 tW = TrainingWindow(original_image, watershed_image, segment_list, 
                     image_name, label_vector, feature_matrix, im_type, im_date, 
