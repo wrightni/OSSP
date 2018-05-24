@@ -216,6 +216,9 @@ def process_block_helper(im_block_queue, clsf_block_queue, image_type,
         result = classify_block(im_block, ws_block, image_type, image_date, rfc)
         # Write the results to the output queue
         clsf_block_queue.put([block_num,result])
+
+        # debug_tools.display_image(im_block,result,2)
+        # time.sleep(10)
     # Signal that this process has finished its task
     clsf_block_queue.put(None)
 
@@ -356,50 +359,6 @@ def neighbor_pixels(image_block, index):
     return pixel_average
 
 
-# Method to assess the training set and classification tree used for this classification
-def test_training(label_vector, training_feature_matrix):
-
-        print "Size of training set: %i" %len(label_vector)
-
-        rfc = RandomForestClassifier(oob_score=True)
-        rfc.fit(training_feature_matrix, label_vector)
-        print "OOB Score: %f" %rfc.oob_score_
-
-        training_feature_matrix = np.array(training_feature_matrix)
-        importances = rfc.feature_importances_
-        std = np.std([tree.feature_importances_ for tree in rfc.estimators_],
-                    axis=0)
-
-        feature_names = ['Mean Intensity','Median\nIntensity','Standard\nDeviation','Segment Size','Entropy',
-                            'Neighbor\nMean Intensity','Neighbor\nStandard\nDeviation','Neighbor\nMaximum',
-                            'Neighbor\nEntropy','Date']
-
-        feature_names = range(len(training_feature_matrix))
-
-        indices = np.argsort(importances)[::-1]
-
-        # feature_names = ['Mean Intensity','Standard Deviation','Size','Entropy','Neighbor Mean Intensity'
-        #                   'Neighbor Standard Deviation','Neighbor Maximum Intensity','Neighbor Entropy','Date']
-
-        # Print the feature ranking
-        print("Feature ranking:")
-
-        feature_names_sorted = []
-        for f in range(training_feature_matrix.shape[1]):
-            print("%d. feature %s (%f)" % (f+1, feature_names[indices[f]], importances[indices[f]]))
-            feature_names_sorted.append(feature_names[indices[f]])
-
-        # Plot the feature importances of the forest
-        plt.figure()
-        plt.title("Feature importances")
-        plt.bar(range(training_feature_matrix.shape[1]), importances[indices],
-                color=[.161,.333,.608], yerr=std[indices], align="center", 
-                error_kw=dict(ecolor=[.922,.643,.173], lw=2, capsize=3, capthick=2))
-        plt.xticks(range(training_feature_matrix.shape[1]), feature_names_sorted)#, rotation='45')
-        plt.xlim([-1, training_feature_matrix.shape[1]])
-        plt.show()
-
-
 def plot_confusion_matrix(y_pred, y):
     plt.imshow(metrics.confusion_matrix(y_pred, y),
                 cmap=plt.cm.binary, interpolation='nearest')
@@ -420,6 +379,8 @@ def main():
                         help="training data file")
     parser.add_argument("training_label", type=str,
                         help="name of training classification list")
+    parser.add_argument("-p", "--parallel", metavar='int', type=int, default=1,
+                        help='''number of processing threads to create.''')
     parser.add_argument("-q", "--quality", action="store_true",
                         help="print the quality assessment of the training dataset.")
     parser.add_argument("--debug", action="store_true",
@@ -432,6 +393,7 @@ def main():
     input_filename = args.input_filename
     tds_file = args.training_dataset
     tds_list = args.training_label
+    threads = args.parallel
     quality_control = args.quality
     debug_flag = args.debug
     verbose_flag = args.verbose
@@ -439,8 +401,12 @@ def main():
     ## Load the training data
     tds = utils.load_tds(tds_file,tds_list)
 
+    
     #### Classify the image with inputs
-    clsf_im = classify_image(input_filename, tds, quality_control=quality_control, debug_flag=debug_flag, verbose=verbose_flag)
+    clsf_im = classify_image(input_filename, tds, threads=threads,
+                                                  quality_control=quality_control, 
+                                                  debug_flag=debug_flag, 
+                                                  verbose=verbose_flag)
 
     # utils.save_results("classification_results", os.path.dirname(input_filename), output_filename, pixel_counts)
 
