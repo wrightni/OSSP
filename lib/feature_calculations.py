@@ -81,10 +81,20 @@ def analyze_pan_image(input_image, watershed_image, entropy_image, date, segment
 		entropy_region = entropy_image[xMin:xMax,yMin:yMax]
 		region_exclude = ~current_sp[xMin:xMax,yMin:yMax]
 
-		square_average = np.average(region[region_exclude])
-		max_near = np.amax(region[region_exclude])
-		std_near = np.std(region[region_exclude])
-		entropy_near = np.average(entropy_region[region_exclude])
+		# If region exclude has 0s for the entire region (happens when there is only one
+		#	superpixel in the image), then set the outside values to be the same as the
+		#	inside ones. I think this makes the valid assumption that if all of an image
+		#	is the same, then the neighboring values are probably similar as well. 
+		if np.max(region_exclude) == 0:
+			square_average = features[0]
+			max_near = features[3]
+			std_near = features[4]
+			entropy_near = features[6]
+		else:
+			square_average = np.average(region[region_exclude])
+			max_near = np.amax(region[region_exclude])
+			std_near = np.std(region[region_exclude])
+			entropy_near = np.average(entropy_region[region_exclude])
 
 		features.append(square_average)
 		features.append(std_near)
