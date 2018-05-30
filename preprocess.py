@@ -8,14 +8,19 @@
 import argparse
 import os
 import math
+import warnings 
+# with warnings.catch_warnings(): 
+#     warnings.filterwarnings("ignore",category=FutureWarning) 
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import matplotlib.image as mimg
 from skimage import exposure
+from skimage import img_as_ubyte
 
 import gdal
 from lib import utils
+from lib import debug_tools
 
 
 def prepare_image(input_path, image_name, image_type, 
@@ -100,7 +105,7 @@ def prepare_image(input_path, image_name, image_type,
         output_path = os.path.join(input_path,"splits")
     # If the output path doesnt already exist, create that directory
     if output_path != None:
-        if not os.path.isdir(output_path): 
+        if not os.path.isdir(output_path):
             os.makedirs(output_path)
 
     #### Splits and Grid Image
@@ -109,103 +114,118 @@ def prepare_image(input_path, image_name, image_type,
     # If number_of_splits > 1, saves each split in its own .h5 file with 
     #   n datasets; one for each spectral band.
 
-    ## For sRGB Images:
-    if image_type == 'srgb':
-        # Set the percentile thresholds at a temporary value until finding the 
-        #   apropriate ones considering all three bands. 
-        lower = -1
-        upper = -1
-        # Create a list to hold all of the bands so we only have to read the 
-        #   dataset once
-        srgb_bands = []
-        # First for loop finds the threshold based on all bands
-        for b in range(1,BANDS+1):
-            # Read the band information from the gdal dataset
-            if verbose: print("Reading band %s data...") %b
-            band = dataset.GetRasterBand(b)
-            band = np.array(band.ReadAsArray())
-            
-            hist, bin_centers = exposure.histogram(band)
-            # Find the strongest (3) peaks in the band histogram
-            peaks = find_peaks(hist, bin_centers, image_type)
-            # Find the high and low threshold for rescaling image intensity
-            lower_b, upper_b = find_threshold(hist, bin_centers, 
-                                              peaks, image_type)
+    # Set the percentile thresholds at a temporary value until finding the 
+    #   apropriate ones considering all three bands. 
+    lower = -1
+    upper = -1
 
-            # For sRGB we want to scale each band by the min and max of all 
-            #   bands. Check thresholds found for this band against any that
-            #   have been previously found, and adjust if necessary. 
-            if lower_b < lower or lower == -1:
-                lower = lower_b
-            if upper_b > upper or upper == -1:
-                upper = upper_b
-            srgb_bands.append(band)
-            #display_histogram(band)
+    # First for loop finds the threshold based on all bands
+    for b in range(1,BANDS+1):
+        # Read the band information from the gdal dataset
+        if verbose: print("Reading band %s data...") %b
+        band = dataset.GetRasterBand(b)
 
-        # Close the gdal dataset
-        dataset = None
+        # Find the min and max image values
+        bmin,bmax = band.ComputeRasterMinMax()
+        # Determine the histogram using gdal
+        nbins = int(bmax-bmin)
+        hist = band.GetHistogram(bmin,bmax,nbins,approx_ok=0)
+        print "*"*10 + str(b) + "*"*10
+        print hist
+        bin_centers = range(int(bmin),int(bmax))
+        print bin_centers
+        bin_centers = np.array(bin_centers)
 
-        # Now that we've checked the histograms of each band in the srgb image, 
-        #   we can rescale and save each band.
-        srgb_bands_output = {}  # {band_id: [subimage][row][column]}
-        for b in range(1,BANDS+1):
-            band = srgb_bands[b-1]
-            # In srgb imagery (where datasets are small) we want to rescale the
-            #   entire band at once. (Contrast to satellite, where we rescale
-            #   one split at a time)
-            if verbose: print "Rescaling band %s" %b
-            srgb_band_rescaled = rescale_band(band, lower, upper)
-            band = None
-            # If the image is not being split, construct image blocks and
-            #   compile that data to return
-            if number_of_splits == 1:
-                srgb_bands_output[b],dimensions = construct_blocks(
-                                                        srgb_band_rescaled,
-                                                        block_cols,
-                                                        block_rows,
-                                                        [split_rows,split_cols])
-                if output_path != None:
-                    # Custom name for training set gui...
-                    fname = os.path.splitext(image_name)[0] + "_segmented.h5"
-                    dst_file = os.path.join(output_path, fname)
-                    # Save the data to disk
-                    write_to_hdf5(dst_file, srgb_bands_output[b], b, image_type, 
-                                  image_date, dimensions)
-            else:
-                if verbose: print "Splitting band %s..." %b
-                # Divide the data into a list of splits
-                srgb_band_split = split_band(srgb_band_rescaled, x_splits, 
-                                             y_splits, split_cols, split_rows)
-                srgb_band_rescaled = None
-                snum = 1    # Tracker for file naming
-                for split in srgb_band_split:
-                    # Grid this split into the appropriate number of blocks
-                    srgb_split_blocked,dimensions = construct_blocks(
-                                                        split, 
-                                                        block_cols, 
-                                                        block_rows,
-                                                        [split_rows,split_cols])
-                    # Determine the output filename
-                    fname = (os.path.splitext(image_name)[0] 
-                            + "_s{0:02d}of{1:02d}.h5".format(snum, 
-                                                             number_of_splits))
-                    dst_file = os.path.join(output_path, fname)
-                    # Save the data to disk
-                    write_to_hdf5(dst_file, srgb_split_blocked, b, image_type, 
-                                  image_date, dimensions)
-                    snum += 1
-                if verbose: print "Band %s complete" %b
-        meta_data = [dimensions, image_date]
+        # Remove the image data from memory for now
+        band = None
+
+        # Find the strongest (3) peaks in the band histogram
+        peaks = find_peaks(hist, bin_centers, image_type)
+        # Find the high and low threshold for rescaling image intensity
+        lower_b, upper_b = find_threshold(hist, bin_centers,
+                                          peaks, image_type)
+
+        # For sRGB we want to scale each band by the min and max of all 
+        #   bands. Check thresholds found for this band against any that
+        #   have been previously found, and adjust if necessary. 
+        if lower_b < lower or lower == -1:
+            lower = lower_b
+        if upper_b > upper or upper == -1:
+            upper = upper_b
         
-        ## Use to save a copy of the preprocessed image:
-        # fname = (os.path.splitext(image_name)[0] + ".png")
-        # color_file = os.path.join(input_path, fname)
-        # save_color_image(srgb_bands_output, color_file, image_type, 
-        #                  dimensions[0], dimensions[1])
+        #display_histogram(band) #Moved to debug tools
+
+    # Now that we've checked the histograms of each band in the srgb image, 
+    #   we can rescale and save each band.
+    bands_output = {}  # {band_id: [subimage][row][column]}
+    for b in range(1,BANDS+1):
+        # Read the gdal dataset and load into numpy array
+        gdal_band = dataset.GetRasterBand(b)
+        band = gdal_band.ReadAsArray()
+        gdal_band = None
+
+        # In srgb imagery (where datasets are small) we want to rescale the
+        #   entire band at once. (Contrast to satellite, where we rescale
+        #   one split at a time)
+        if verbose: print "Rescaling band %s" %b
+        band_rescaled = rescale_band(band, lower, upper)
+        band = None
+        # If the image is not being split, construct image blocks and
+        #   compile that data to return
+        if number_of_splits == 1:
+            bands_output[b],dimensions = construct_blocks(
+                                                    band_rescaled,
+                                                    block_cols,
+                                                    block_rows,
+                                                    [split_rows,split_cols])
+            if output_path != None:
+                # Custom name for training set gui...
+                fname = os.path.splitext(image_name)[0] + "_segmented.h5"
+                dst_file = os.path.join(output_path, fname)
+                # Save the data to disk
+                write_to_hdf5(dst_file, bands_output[b], b, image_type, 
+                              image_date, dimensions)
+        else:
+            if verbose: print "Splitting band %s..." %b
+            # Divide the data into a list of splits
+            band_split = split_band(band_rescaled, x_splits, 
+                                         y_splits, split_cols, split_rows)
+            band_rescaled = None
+            snum = 1    # Tracker for file naming
+            for split in band_split:
+                # Grid this split into the appropriate number of blocks
+                split_blocked,dimensions = construct_blocks(
+                                                    split, 
+                                                    block_cols, 
+                                                    block_rows,
+                                                    [split_rows,split_cols])
+                # Determine the output filename
+                fname = (os.path.splitext(image_name)[0] 
+                        + "_s{0:02d}of{1:02d}.h5".format(snum, 
+                                                         number_of_splits))
+                dst_file = os.path.join(output_path, fname)
+                # Save the data to disk
+                write_to_hdf5(dst_file, split_blocked, b, image_type, 
+                              image_date, dimensions)
+                snum += 1
+        if verbose: print "Band %s complete" %b
+        
+    meta_data = [dimensions, image_date]
+        
+    ## Use to save a copy of the preprocessed image:
+    print bands_output.keys()
+    fname = (os.path.splitext(image_name)[0] + ".png")
+    color_file = os.path.join(output_path, fname)
+    save_color_image(bands_output, color_file, image_type, 
+                     dimensions[0], dimensions[1])
         ##
 
-        return srgb_bands_output, meta_data
+    # If number_of_splits is more than 1, bands_output will be empty
+    return bands_output, meta_data
 
+
+
+    # OLD
     ## For WV02_MS and Pan Images
     # In WV imagery we want to scale each band independently, based on 
     #   its own min and max values. Therefore we don't need to hold onto
@@ -230,13 +250,27 @@ def prepare_image(input_path, image_name, image_type,
             if number_of_splits == 1:
                 if verbose: print "Rescaling band %s" %b
                 # Rescale the band
-                sat_band_rescaled = rescale_band(band, lower_b, upper_b)
+                ####  testing 5-9-18
+                # sat_band_rescaled = rescale_band(band, lower_b, upper_b)
+                sat_band_rescaled = band / 10000.
+                sat_band_rescaled[sat_band_rescaled<0] = 0.
+                sat_band_rescaled[sat_band_rescaled>1] = 1.
+                sat_band_rescaled = img_as_ubyte(sat_band_rescaled)
+                ####
+
                 # Grid band into blocks and compile
                 sat_output_bands[b],dimensions = construct_blocks(
-                                                    sat_band_rescaled, 
-                                                    block_cols, 
+                                                    sat_band_rescaled,
+                                                    block_cols,
                                                     block_rows,
                                                     [split_rows,split_cols])
+                if output_path != None:
+                    # Custom name for training set gui...
+                    fname = os.path.splitext(image_name)[0] + ".h5"
+                    dst_file = os.path.join(output_path, fname)
+                    # Save the data to disk
+                    write_to_hdf5(dst_file, sat_output_bands[b], b, image_type, 
+                                  image_date, dimensions)
                 sat_band_rescaled = None
             else:
                 if verbose: print "Splitting band %s..." %b
@@ -266,6 +300,17 @@ def prepare_image(input_path, image_name, image_type,
                     snum += 1
 
                 if verbose: print "Band %s complete" %b
+        
+        ## Use to save a copy of the preprocessed image:
+        # fname = (os.path.splitext(image_name)[0] + ".png")
+        color_file = os.path.join(input_path, fname)
+        save_color_image(sat_output_bands, color_file, image_type, 
+                         dimensions[0], dimensions[1])
+        # debug_tools.display_histogram(sat_output_bands[4][41])
+        # plt.imshow(sat_output_bands[4][41])
+        # plt.show()
+        ##
+
         # Close the gdal dataset
         dataset = None
         meta_data = [dimensions, image_date]
@@ -348,7 +393,8 @@ def read_metadata(metadata, image_type):
             header_date = metadata['EXIF_DateTime']
             image_date = header_date[5:7] + header_date[8:10]
         elif image_type == 'pan' or image_type == 'wv02_ms':
-            image_date = metadata['NITF_STDIDC_ACQUISITION_DATE'][4:8]
+            # image_date = metadata['NITF_STDIDC_ACQUISITION_DATE'][4:8]
+            image_date = metadata['NITF_IDATIM'][4:8]
     except:
         image_date = "0601"         # June first
     
@@ -439,7 +485,7 @@ def find_threshold(hist, bin_centers, peaks, image_type):
         the number of pixels.
     10% and 50% picked emperically to give good results.  
     '''
-    
+
     max_peak = np.where(bin_centers==peaks[-1])[0][0] # Max intensity
     thresh_top = max_peak
     while hist[thresh_top] > hist[max_peak]*0.1:
@@ -479,21 +525,6 @@ def find_threshold(hist, bin_centers, peaks, image_type):
                 upper = max_range
 
     return lower, upper
-
-def display_histogram(image_band):
-    '''
-    Displays a histogram of the given band's data. 
-    Ignores zero values.
-    '''
-    hist, bin_centers = exposure.histogram(image_band[image_band>=1])
-
-    plt.figure(1)
-    plt.bar(bin_centers, hist)
-    plt.xlim((0,np.max(image_band)))
-    plt.ylim((0,np.max(hist[0:np.max(image_band)])))
-    plt.xlabel("Pixel Intensity")
-    plt.ylabel("Frequency")
-    plt.show()
 
 
 def split_band(band, num_x, num_y, size_x, size_y):
@@ -624,6 +655,7 @@ def downsample(band,factor):
     from skimage.measure import block_reduce
 
     band_downsample = block_reduce(band, block_size=(factor,factor),func=np.mean)
+    
     band_copy = np.zeros(np.shape(band))
     for i in range(np.shape(band_downsample)[0]):
         for j in range(np.shape(band_downsample)[1]):
@@ -667,8 +699,10 @@ def main():
     verbose = args.verbose
     
     #### Split Image with Given Arguments
-    prepare_image(input_path, image_name, image_type, output_path, 
-                  number_of_splits, verbose)
+    prepare_image(input_path, image_name, image_type, 
+                    output_path=output_path, 
+                    number_of_splits=number_of_splits, 
+                    verbose=verbose)
 
 if __name__ == "__main__":
     main()
