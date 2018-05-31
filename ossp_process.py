@@ -1,5 +1,5 @@
 #Batch Process
-#Usage: Fully processes all images in the given directory with the given training data. 
+#Usage: Fully processes all images in the given directory with the given training data.
 
 #### Lite version of batch_process_mp.py
 # This version will only output a single file in the given output directory
@@ -8,14 +8,14 @@
 # Changes from master:
 # added output dir argument
 # removed creation of output csv
-# removed deletion of hidden files and folders (this needs to be changed 
+# removed deletion of hidden files and folders (this needs to be changed
 #   in the main version as well)
 # added a verbose flag to suppress/allow console output
-# removes more of the intermediate files along the way and cleans up 
+# removes more of the intermediate files along the way and cleans up
 #   all temp folders at the end
 # will always reclassify any images that it is given. does not check for ones
-#   that have already been classified. 
-# 
+#   that have already been classified.
+#
 
 import os
 import shutil
@@ -24,12 +24,14 @@ import multiprocessing
 import time
 import h5py
 import numpy as np
+import subprocess
+
 
 from preprocess import prepare_image
 from segment import segment_image
 from classify import classify_image
 
-from lib import utils
+from lib import utils, ortho_pan
 
 import matplotlib.pyplot as plt
 from skimage import filters, morphology, feature, exposure, segmentation, future
@@ -39,8 +41,8 @@ def main():
 
     #### Set Up Arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_dir", 
-                        help=('''directory path containing date directories of 
+    parser.add_argument("input_dir",
+                        help=('''directory path containing date directories of
                         images to be processed'''))
     parser.add_argument("image_type", type=str, choices=['srgb','wv02_ms','pan'],
                         help="image type: 'srgb', 'wv02_ms', 'pan'")
@@ -62,6 +64,13 @@ def main():
                                     2) classified results (csv)
                                     3) segmented image (h5)
                         ''')
+    parser.add_argument("-or", "--orthorectify", action = "store_true",
+                            help = "orthorectify and if multispectral pansharpen \
+                            image before processing")
+    parser.add_argument("-orpath", "--orthorectify_path", type=str, default=None,
+                            help= "location of pgc_ortho.py if orthorectifiying")
+    parser.add_argument("-panpath", "--pansharpening_path", type=str, default=None,
+                            help="location of gdal_pansharpen.py if using wv02_ms images")
 
     #### Parse Arguments
     args = parser.parse_args()
@@ -96,8 +105,11 @@ def main():
     num_threads = args.parallel
     verbose = args.verbose
     extended_output = args.extended_output
+    orthorectify = args.orthorectify
+    or_path = args.orpath
+    pan_path = args.panpath
 
-    # Make sure the user doesn't try to use more cores than they have. 
+    # Make sure the user doesn't try to use more cores than they have.
     #if num_threads > multiprocessing.cpu_count():
     #    num_threads = multiprocessing.cpu_count()-1
 
@@ -110,9 +122,19 @@ def main():
     ### Prepare a list of images to be processed based on the user input
     # List of task objects based on the files in the input directory
     # Each task is an image to process, and has a subtask for each split
-    #   of that image. 
-    task_list = utils.create_task_list(os.path.join(src_dir,src_file), 
+    #   of that image.
+    task_list = utils.create_task_list(os.path.join(src_dir,src_file),
                                         dst_dir, num_splits)
+
+    # pattern = "WV{v}_{date}_{otherstuff}_{dateagain}_{type}_{moreotherstuff}.ntf"
+    # if orthorectify:
+    #     if image_type == 'pan':
+    #         for image in src_dir:
+    #             ortho_pan.raw2orthorectify(image, working_dir)
+    #     if image_type == 'wv02_ms':
+    #         for image in src_dir:
+    #             if
+    #             ortho_pan.raw2pansharpened()
     ### Load Training Data
     tds = utils.load_tds(tds_file,tds_label)
 
@@ -121,14 +143,35 @@ def main():
         # Skip this task if it is already marked as complete
         if task.is_complete():
             continue
-
+        #need to fix this so they can go into the working directory
+        ortho_images = 'C:\Users\F003P1J\Desktop\DartmouthResearch\OSSP-master\ortho_images'
+        if orthorectify:
+            if image_type == 'pan':
+                    image_name = task.getid()
+                    pan_image = src_dir + '\\' + image_name
+                    print pan_image
+                    ortho_pan.raw2orthorectify(pan_image, ortho_images, or_path)
+            elif image_type == 'wv02_ms':
+                im_name = task.get_id()
+                if 'P1BS' in im_name:
+                    # Skip this task if image_type == 'wv02_ms'
+                    continue
+                else:
+                    ms_image = src_dir + '\\' + im_name
+                    pan_image = src_dir + '\\' + im_name[0:51] + "P1BS" + im_name[55:]
+                    print ms_image
+                    print pan_image
+                    ortho_pan.raw2pansharpened(pan_image, ms_image, ortho_images, or_path, pan_path)
+            else:
+                print "srgb photos cannot be orthorectified"
         # If the image has not yet been split or if no splitting was requested,
         # proceed to the preprocessing step.
+        #need to pass in pansharpened image if they did that
         if not task.is_split() or num_splits == 1:
             image_name = task.get_id()
-            image_data, meta_data = prepare_image(src_dir, image_name, image_type, 
+            image_data, meta_data = prepare_image(src_dir, image_name, image_type,
                                         output_path=working_dir,
-                                        number_of_splits=num_splits, 
+                                        number_of_splits=num_splits,
                                         verbose=verbose)
             block_dims = meta_data[0]
             image_date = meta_data[1]
@@ -159,11 +202,11 @@ def main():
             ## Segment image
             seg_time = time.clock()
             if verbose: print("Segmenting image: %s" %subtask)
-            image_data, segmented_blocks = segment_image(image_data, 
+            image_data, segmented_blocks = segment_image(image_data,
                                 image_type=image_type,
-                                threads=num_threads, 
+                                threads=num_threads,
                                 verbose=verbose)
-            if verbose: print("Segment finished: %s: %f" 
+            if verbose: print("Segment finished: %s: %f"
                               %(subtask, time.clock() - seg_time))
 
             ###
@@ -175,16 +218,16 @@ def main():
             ## Classify image
             class_time = time.clock()
             if verbose: print("Classifying image: %s" %subtask)
-            classified_blocks = classify_image(image_data, segmented_blocks, tds, 
-                                 [image_type,image_date], threads=num_threads, 
+            classified_blocks = classify_image(image_data, segmented_blocks, tds,
+                                 [image_type,image_date], threads=num_threads,
                                  verbose=verbose)
-            if verbose: print("Classification finished: %s: %f" 
+            if verbose: print("Classification finished: %s: %f"
                               %(subtask,time.clock()-class_time))
 
             ## Hold onto the output of this subtask
             clsf_split = utils.compile_subimages(classified_blocks,block_dims[0],
                                              block_dims[1])
-            
+
             # Save the results to the temp folder if there is more than 1 split
             if num_splits > 1:
                 with h5py.File(os.path.join(working_dir,subtask)+'_classified.h5',
@@ -193,15 +236,15 @@ def main():
                                      compression='gzip',compression_opts=3)
             else:
                 classified_image = clsf_split
-            
-            # Add the pixel counts from this classified split to the 
+
+            # Add the pixel counts from this classified split to the
             #   running total.
             pixel_counts_split = utils.count_features(clsf_split)
             for i in range(len(pixel_counts)):
                 pixel_counts[i] += pixel_counts_split[i]
 
             # Mark this subtask as complete. This sets task.complete to True
-            #   if there are no subtasks. 
+            #   if there are no subtasks.
             task.update_subtask(subtask)
 
 
@@ -222,10 +265,10 @@ def main():
         ####
         # Write the total pixel counts to the database (or csv)
         if extended_output:
-            utils.write_to_csv(os.path.join(dst_dir,task.get_id()), dst_dir, 
+            utils.write_to_csv(os.path.join(dst_dir,task.get_id()), dst_dir,
                                 subtask, pixel_counts)
 
-        ## Writing the results to a sqlite database. (Only works for 
+        ## Writing the results to a sqlite database. (Only works for
         #   a specific database structure that has already been created)
         # db_name = 'ImageDatabase.db'
         # db_dir = '/media/sequoia/DigitalGlobe/'
@@ -257,7 +300,7 @@ def main():
                 f.attrs.create("pixel_counts",pixel_counts)
         # Save color image for viewing
         if extended_output:
-            utils.save_color(classified_image, 
+            utils.save_color(classified_image,
                              os.path.join(dst_dir,image_name)+'.png')
 
         ### Remove temp folders?
