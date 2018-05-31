@@ -130,10 +130,7 @@ def prepare_image(input_path, image_name, image_type,
         # Determine the histogram using gdal
         nbins = int(bmax-bmin)
         hist = band.GetHistogram(bmin,bmax,nbins,approx_ok=0)
-        print "*"*10 + str(b) + "*"*10
-        print hist
         bin_centers = range(int(bmin),int(bmax))
-        print bin_centers
         bin_centers = np.array(bin_centers)
 
         # Remove the image data from memory for now
