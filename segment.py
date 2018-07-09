@@ -1,6 +1,6 @@
-#title: Watershed Transform
-#author: Nick Wright
-#adapted from: Justin Chen, Arnold Song
+# title: Watershed Transform
+# author: Nick Wright
+# adapted from: Justin Chen, Arnold Song
 
 import argparse
 import time
@@ -9,11 +9,9 @@ import os
 import h5py
 from multiprocessing import Process, Queue
 
-import skimage
 from skimage import filters, morphology, feature, exposure
 from skimage.future import graph
 from scipy import ndimage
-import matplotlib.pyplot as plt
 
 from lib import utils
 from lib import debug_tools
@@ -194,6 +192,10 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
             markers.
         5. Recombine neighboring image segments using a region adjacency graph.
     '''
+    # If this block has no data, return a placeholder watershed.
+    if np.amax(image_data[0]) <= 1:
+        return np.zeros(np.shape(image_data))
+
     # Create a gradient image using a sobel filter
     sobel_image = filters.sobel(image_data[0])
 
