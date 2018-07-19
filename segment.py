@@ -197,7 +197,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         return np.zeros(np.shape(image_data))
 
     # Create a gradient image using a sobel filter
-    sobel_image = filters.sobel(image_data[0])
+    sobel_image = filters.sobel(image_data[2])
 
     # Adjust the sobel image based on the given threshold and amp factor.
     upper_threshold = np.amax(sobel_image)/amplification_factor
@@ -234,7 +234,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
 
     # Find the locations that contain no spectral data
     empty_pixels = np.zeros(np.shape(image_data[0]),dtype='bool')
-    empty_pixels[image_data[0] == 0] = True
+    empty_pixels[image_data[2] == 0] = True
     # Set all values outside of the image area (empty pixels, usually caused by
     #   orthorectification) to one value, at the end of the watershed list.
     im_watersheds[empty_pixels] = np.amax(im_watersheds)+1
