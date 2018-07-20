@@ -203,8 +203,8 @@ def prepare_image(input_path, image_name, image_type,
                 # Save the data to disk
                 write_to_hdf5(dst_file, split_blocked, b, image_type,
                               image_date, dimensions)
-                utils.save_color(utils.compile_subimages(split_blocked, dimensions[0], dimensions[1]),
-                                 dst_file[:-3] + '.png')
+                # utils.save_color(utils.compile_subimages(split_blocked, dimensions[0], dimensions[1]),
+                #                  dst_file[:-3] + '.png')
                 snum += 1
         if verbose:
             print("Band %s complete" % b)
