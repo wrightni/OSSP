@@ -148,8 +148,6 @@ def prepare_image(input_path, image_name, image_type,
         if upper_b > upper or upper == -1:
             upper = upper_b
 
-        # display_histogram(band) #Moved to debug tools
-    print(upper, lower)
     # Now that we've checked the histograms of each band in the srgb image, 
     #   we can rescale and save each band.
     bands_output = {}  # {band_id: [subimage][row][column]}l
