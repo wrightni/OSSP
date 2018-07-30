@@ -357,16 +357,16 @@ def stitch(image_files, save_path=None):
     # Stitch the classified image back together
     full_classification = compile_subimages(classified_list,box_side,box_side)
 
-    if os.path.isdir(save_path):
-        output_name = os.path.join(save_path, os.path.split(image_files[0])[1][:-18])
-        fout = h5py.File(output_name + "_classified.h5",'w')
-        fout.create_dataset('classified',data=full_classification,compression='gzip',compression_opts=9)
-        fout.close()
-    else:
-        save_color(full_classification, image_files[0][:-18] + "_classified_image.png")
-        fout = h5py.File(image_files[0][:-18] + "_classified.h5",'w')
-        fout.create_dataset('classified',data=full_classification,compression='gzip',compression_opts=9)
-        fout.close()
+    # if os.path.isdir(save_path):
+    #     output_name = os.path.join(save_path, os.path.split(image_files[0])[1][:-18])
+    #     fout = h5py.File(output_name + "_classified.h5",'w')
+    #     fout.create_dataset('classified',data=full_classification,compression='gzip',compression_opts=9)
+    #     fout.close()
+    # else:
+    #     save_color(full_classification, image_files[0][:-18] + "_classified_image.png")
+    #     fout = h5py.File(image_files[0][:-18] + "_classified.h5",'w')
+    #     fout.create_dataset('classified',data=full_classification,compression='gzip',compression_opts=9)
+    #     fout.close()
 
     return full_classification
 

@@ -23,7 +23,7 @@ from lib import utils, feature_calculations
 
 
 def classify_image(input_image, watershed_data, training_dataset, meta_data,
-            threads=2, quality_control=False, debug_flag=False, verbose=False):
+            threads=1, quality_control=False, verbose=False):
     '''
     Run a random forest classification. 
     Input: 
@@ -52,18 +52,9 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
                 [input_image[b][blk] for b in range(1,num_bands+1)]))
     input_image = None
 
-    # watershed_image = input_file['watershed'][:]
-    # watershed_dimensions = input_file['dimensions'][:]
-    # num_x_subimages = dimensions[0]
-    # num_y_subimages = dimensions[1]
-    
-
     ## Parse training_dataset input
     label_vector = training_dataset[0]
     training_feature_matrix = training_dataset[1]
-
-    # im_type = input_file.attrs.get('Image Type')
-    # im_date = input_file.attrs.get('Image Date')
 
     #Method for assessing the quality of the training dataset. 
     if quality_control == True:
@@ -162,30 +153,30 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     return clsf_block_list
 
 
-    # Lite version: Save only the classified output, and do not save the original image data
-    compiled_classified = utils.compile_subimages(classified_image, num_x_subimages, num_y_subimages, 1)
-
-    if verbose: print "Saving..."
-    
-    with h5py.File(os.path.join(output_filepath, output_filename + '_classified.h5'),'w') as outfile:
-        outfile.create_dataset('classified', data=compiled_classified,compression='gzip',compression_opts=9)
-
-    #### Count the number of pixels that were in each classification category. 
-    sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow = utils.count_features(compiled_classified)
-    pixel_counts = [sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow]
-
-    # Clear the image datasets from memory
-    compiled_classified = None
-    input_image = None
-    watershed_image = None
-
-    cur_image = None
-    cur_ws = None
-    entropy_image = None
-    
-    if verbose: print "Done."
-
-    return output_filename, pixel_counts
+    # # Lite version: Save only the classified output, and do not save the original image data
+    # compiled_classified = utils.compile_subimages(classified_image, num_x_subimages, num_y_subimages, 1)
+    #
+    # if verbose: print "Saving..."
+    #
+    # with h5py.File(os.path.join(output_filepath, output_filename + '_classified.h5'),'w') as outfile:
+    #     outfile.create_dataset('classified', data=compiled_classified,compression='gzip',compression_opts=9)
+    #
+    # #### Count the number of pixels that were in each classification category.
+    # sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow = utils.count_features(compiled_classified)
+    # pixel_counts = [sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow]
+    #
+    # # Clear the image datasets from memory
+    # compiled_classified = None
+    # input_image = None
+    # watershed_image = None
+    #
+    # cur_image = None
+    # cur_ws = None
+    # entropy_image = None
+    #
+    # if verbose: print "Done."
+    #
+    # return output_filename, pixel_counts
 
 
 def construct_block_queue(image_block_list, watershed_block_list, size):

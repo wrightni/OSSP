@@ -18,7 +18,7 @@ from lib import utils
 
 
 def prepare_image(input_path, image_name, image_type,
-                  output_path=None, number_of_splits=1, verbose=False):
+                  output_path=None, number_of_splits=1, apply_correction=True, verbose=False):
     """
     Reads an image file and prepares it for further processing.
         1. Rescales image intensity based on the input histogram.
@@ -90,9 +90,9 @@ def prepare_image(input_path, image_name, image_type,
     #   Determine bands from dataset
     metadata = dataset.GetMetadata()
     image_date = read_metadata(metadata, image_type)
-    BANDS = dataset.RasterCount
+    band_count = dataset.RasterCount
     if verbose:
-        print("Number of Bands: %i" % BANDS)
+        print("Number of Bands: %i" % band_count)
         print("Using %i as image date." % image_date)
 
     # Verify output directory
@@ -104,7 +104,7 @@ def prepare_image(input_path, image_name, image_type,
         if not os.path.isdir(output_path):
             os.makedirs(output_path)
 
-    # Splits and Grid Image
+    # Split and Grid Image
     #   Splits the image into number_of_split parts, and divides each split into
     #       block_cols X block_rows grids.
     #   If number_of_splits > 1, saves each split in its own .h5 file with
@@ -116,15 +116,19 @@ def prepare_image(input_path, image_name, image_type,
     upper = -1
 
     # First for loop finds the threshold based on all bands
-    for b in range(1, BANDS + 1):
-        # Read the band information from the gdal dataset
+    for b in range(1, band_count + 1):
+        # Flag for choosing whether to apply correction
+        if apply_correction is False:
+            continue
 
         if verbose:
-            print("Reading band %s data..." % b)
+            print("Analyzing band %s data..." % b)
+        # Read the band information from the gdal dataset
         band = dataset.GetRasterBand(b)
 
         # Find the min and max image values
         bmin, bmax = band.ComputeRasterMinMax()
+
         # Determine the histogram using gdal
         nbins = int(bmax - bmin)
         hist = band.GetHistogram(bmin, bmax, nbins, approx_ok=0)
@@ -148,32 +152,36 @@ def prepare_image(input_path, image_name, image_type,
         if upper_b > upper or upper == -1:
             upper = upper_b
 
-    # Now that we've checked the histograms of each band in the srgb image, 
+    # Now that we've checked the histograms of each band in the image,
     #   we can rescale and save each band.
     bands_output = {}  # {band_id: [subimage][row][column]}l
-    for b in range(1, BANDS + 1):
+    for b in range(1, band_count + 1):
         # Read the gdal dataset and load into numpy array
         gdal_band = dataset.GetRasterBand(b)
         band = gdal_band.ReadAsArray()
         gdal_band = None
 
-        # Rescale the band based on the lower and upper thresholds found
-        if verbose:
-            print("Rescaling band %s" % b)
-        band_rescaled = rescale_band(band, lower, upper)
-        band = None
+        if apply_correction is True:
+            if verbose:
+                print("Rescaling band %s" % b)
+            # Rescale the band based on the lower and upper thresholds found
+            band = rescale_band(band, lower, upper)
+        else:
+            if image_type == 'wv02_ms' or image_type == 'pan':
+                band = rescale_band(band, 1, 2047)
 
         # If the image is not being split, construct image blocks and
         #   compile that data to return
         if number_of_splits == 1:
             bands_output[b], dimensions = construct_blocks(
-                band_rescaled,
+                band,
                 block_cols,
                 block_rows,
                 [split_rows, split_cols])
             if output_path is not None:
-                # Custom name for training set gui...
-                fname = os.path.splitext(image_name)[0] + "_segmented.h5"
+                # Saves the preprocessed image. Mostly used for
+                # making the images for training set creation.
+                fname = os.path.splitext(image_name)[0] + "_prep.h5"
                 dst_file = os.path.join(output_path, fname)
                 # Save the data to disk
                 write_to_hdf5(dst_file, bands_output[b], b, image_type,
@@ -181,10 +189,9 @@ def prepare_image(input_path, image_name, image_type,
         else:
             if verbose:
                 print("Splitting band %s..." % b)
-            # Divide the data into a list of splits
-            band_split = split_band(band_rescaled, x_splits,
+            # Divide the data into a list of splits1
+            band_split = split_band(band, x_splits,
                                     y_splits, split_cols, split_rows)
-            band_rescaled = None
             snum = 1  # Tracker for file naming
             for split in band_split:
                 # Grid this split into the appropriate number of blocks
@@ -201,8 +208,6 @@ def prepare_image(input_path, image_name, image_type,
                 # Save the data to disk
                 write_to_hdf5(dst_file, split_blocked, b, image_type,
                               image_date, dimensions)
-                # utils.save_color(utils.compile_subimages(split_blocked, dimensions[0], dimensions[1]),
-                #                  dst_file[:-3] + '.png')
                 snum += 1
         if verbose:
             print("Band %s complete" % b)
@@ -241,7 +246,7 @@ def find_blocksize(x_dim, y_dim, desired_size):
     # Just in case x_dim and y_dim are smaller than expected
     if x_dim < desired_size or y_dim < desired_size:
         block_x = x_dim
-        block_x = y_dim
+        block_y = y_dim
 
     factors_x = factor(x_dim)
     factors_y = factor(y_dim)
@@ -305,11 +310,6 @@ def find_peaks(hist, bin_centers, image_type):
         Distance to the nearest neighboring peak is greater than one third the approx. dynamic range of the input image
         Has a minimum number of pixels in that peak, loosely based on image size
         Is greater than the directly adjacent bins, and the bins +/- 5 away
-
-    :param hist:
-    :param bin_centers:
-    :param image_type:
-    :return:
     """
 
     # Roughly define the smallest acceptable size of a peak based on the input image type.
@@ -381,12 +381,6 @@ def find_threshold(hist, bin_centers, peaks, image_type):
     threshold that is both greater than the highest peak and has fewer than 10% the number of pixels, and a lower
     threshold that is both less than the lowest peak and has fewer than 50% the number of pixels.
     10% and 50% picked empirically to give good results.
-
-    :param hist:
-    :param bin_centers:
-    :param peaks:
-    :param image_type:
-    :return lower, upper:
     """
 
     max_peak = np.where(bin_centers == peaks[-1])[0][0]  # Max intensity

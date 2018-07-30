@@ -19,7 +19,7 @@ from lib import debug_tools
 # tqdm for progress bar
 
 
-def segment_image(input_data, image_type=False, test_check=False, threads=2,
+def segment_image(input_data, image_type=False, test_check=False, threads=1,
                   write_results=False, dst_file=False, verbose=False):
     '''
     Wrapper function that handles all of the processing to create watersheds
@@ -65,8 +65,8 @@ def segment_image(input_data, image_type=False, test_check=False, threads=2,
         amplification_factor = 2.
         band_list = [1,1,1]
     elif image_type == 'wv02_ms':
-        sobel_threshold = 0.0
-        amplification_factor = 3
+        sobel_threshold = 0.1
+        amplification_factor = 3.
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.1
@@ -141,7 +141,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=2,
 
     while test_check:
         test_check = check_results(im_block_dict,segmnt_block_list)
-    # print np.shape(segmnt_block_list)
+
     if write_results:
         write_to_hdf5(segmnt_block_list, dst_file)
         return None, None
