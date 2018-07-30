@@ -90,6 +90,14 @@ def main():
 
     for task in task_list:
 
+        # ASP: Restrict processing to the frame range
+        # try:
+        #     frameNum = getFrameNumberFromFilename(file)
+        # except Exception, e:
+        #     continue
+        # if (frameNum < args.min_frame) or (frameNum > args.max_frame):
+        #     continue
+
         # Skip this task if it is already marked as complete
         if task.is_complete():
             continue
