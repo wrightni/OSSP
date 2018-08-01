@@ -33,6 +33,11 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         im_block_dict = input_data     # Does this need to be checked first?
         input_data = None
         pass
+    except AttributeError:
+        # Input_data is not a string (so it is image data?)
+        im_block_dict = input_data     # Does this need to be checked first?
+        input_data = None
+        pass
     except IOError:
         # Input_data is string, but not a valid hdf5 file
         raise

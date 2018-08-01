@@ -2,18 +2,12 @@
 #author: Nick Wright
 
 import argparse
-import time
-import math
 from multiprocessing import Process, Queue
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.image as mimg
-from skimage import filters, morphology, segmentation
-from scipy.misc import bytescale
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
 
@@ -234,11 +228,11 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
         input_feature_matrix = feature_calculations.analyze_ms_image(
                                 image_block, watershed_block)
     elif image_type == 'srgb':
-        entropy_image = entropy(bytescale(image_block[:,:,0]), disk(4))
+        entropy_image = entropy(image_block[:,:,0], disk(4))
         input_feature_matrix = feature_calculations.analyze_srgb_image(
                                 image_block, watershed_block, entropy_image)
     elif image_type == 'pan':
-        entropy_image = entropy(bytescale(image_block[:,:,0]), disk(4))
+        entropy_image = entropy(image_block[:,:,0], disk(4))
         input_feature_matrix = feature_calculations.analyze_pan_image(
                                 image_block, watershed_block, 
                                 entropy_image, image_date)
