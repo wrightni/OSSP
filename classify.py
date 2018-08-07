@@ -251,7 +251,7 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     #                                     image_block)
     # else:
     clsf_block = create_clsf_raster(ws_predictions, watershed_block, 
-                                    image_block[:,:,0])
+                                    image_block)
     return clsf_block
 
 
@@ -262,12 +262,15 @@ def create_clsf_raster(prediction, watershed_block, image_block):
     '''
     # Create a blank image that we will assign values based on the prediction for each
     #   watershed. 
-    clsf_block = np.zeros(np.shape(image_block),dtype=np.uint8)
+    clsf_block = np.zeros(np.shape(image_block[:,:,0]),dtype=np.uint8)
     
     # Check to see if the whole block is one segment
     if np.amax(watershed_block) == 1:
+        # Assign the prediction for that one segment to the whole image
         clsf_block = clsf_block + prediction[0]
-        clsf_block[image_block == 0] = 0
+        clsf_block[(image_block[:,:,0] == 0)
+                   & (image_block[:,:,1] == 0)
+                   & (image_block[:,:,2] == 0)] = 0
         return clsf_block
 
     # Watershed indexes start at 0, so we have to add 1 to get the number. 
@@ -305,8 +308,10 @@ def create_clsf_raster(prediction, watershed_block, image_block):
             elif neighbor_values == 4:
                 clsf_block[current_ws] = 4
 
-    # Setting the empty pixels to 0
-    clsf_block[image_block==0] = 0
+    # Setting the empty pixels (at least 3 bands have values of 0) to 0
+    clsf_block[(image_block[:,:,0] == 0)
+               & (image_block[:,:,1] == 0)
+               & (image_block[:,:,2] == 0)] = 0
 
     # Shadow is being reassigned to ice and snow. 
     # clsf_block[clsf_block==5] = 1

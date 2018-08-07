@@ -238,8 +238,11 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     sobel_image = None
 
     # Find the locations that contain no spectral data
-    empty_pixels = np.zeros(np.shape(image_data[0]),dtype='bool')
-    empty_pixels[image_data[2] == 0] = True
+    #  i.e. pixels that are 0 in all bands
+    empty_pixels = np.zeros(np.shape(image_data[0]), dtype='bool')
+    empty_pixels[(image_data[0] == 0)
+                 & (image_data[1] == 0)
+                 & (image_data[2] == 0)] = True
     # Set all values outside of the image area (empty pixels, usually caused by
     #   orthorectification) to one value, at the end of the watershed list.
     im_watersheds[empty_pixels] = np.amax(im_watersheds)+1
