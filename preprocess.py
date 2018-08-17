@@ -50,16 +50,18 @@ def prepare_image(input_path, image_name, image_type,
     #   Round number_of_splits to the nearest square number
     base = round(math.sqrt(number_of_splits))
     # Approximate size of image block.
-    desired_block_size = 500
+    # Might want to select this based on input image type?
+    desired_block_size = 8000
 
     # Make sure each split is big enough for at least 2 grids in each 
     #   dimension. If not, there's really little reason to be splitting this 
-    #   image in the first place. 
-    while (dataset.RasterXSize / base < desired_block_size * 2
-           or dataset.RasterYSize / base < desired_block_size * 2):
-        base -= 1
-        if verbose:
-            print("Too many splits chosen, reducing to: %i" % (base * base))
+    #   image in the first place.
+    if number_of_splits < 1:
+        while (dataset.RasterXSize / base < desired_block_size * 2
+               or dataset.RasterYSize / base < desired_block_size * 2):
+            base -= 1
+            if verbose:
+                print("Too many splits chosen, reducing to: %i" % (base * base))
 
     # Calculate grids for dividing raw image into chunks.
     #   Determine the number of splits in x and y dimensions. These are equal to
@@ -464,10 +466,11 @@ def construct_blocks(image, block_cols, block_rows, pad_dim):
 
     block_list = []
     # Append a 2d array of the image block to
+    pad_amt = 100
     for y in range(num_block_rows):
         for x in range(num_block_cols):
-            block_list.append(padded_image[y * block_rows:(y + 1) * block_rows,
-                              x * block_cols:(x + 1) * block_cols])
+            block_list.append(padded_image[(y * block_rows) : ((y + 1) * block_rows),
+                                           (x * block_cols) : ((x + 1) * block_cols)])
     dimensions = [num_block_cols, num_block_rows]
     return block_list, dimensions
 
