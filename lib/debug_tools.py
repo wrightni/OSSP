@@ -112,7 +112,7 @@ def test_training(label_vector, training_feature_matrix):
 
     print "Size of training set: %i" %len(label_vector)
 
-    rfc = RandomForestClassifier(oob_score=True)
+    rfc = RandomForestClassifier(n_estimators=100,oob_score=True)
     rfc.fit(training_feature_matrix, label_vector)
     print "OOB Score: %f" %rfc.oob_score_
 

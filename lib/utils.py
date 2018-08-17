@@ -110,6 +110,10 @@ def create_task_list(src_dir, dst_dir, num_splits):
         # Loop through contents in the current directory
         for file in files:
 
+            # Skip hidden files
+            if file[0] == '.':
+                continue
+
             image_name,ext = os.path.splitext(file)
             # Check that the file is .tif or .jpg format
             ext = ext.lower()
@@ -206,7 +210,7 @@ def load_tds(file_name, list_name):
     ## Convert inputs to python lists
     label_vector = label_vector.tolist()
     training_feature_matrix = training_feature_matrix.tolist()
-    # Remove feature lists that dont have an associated label
+    # Remove feature lists that don't have an associated label
     training_feature_matrix = training_feature_matrix[:len(label_vector)]
     # print "__"
     # print len(label_vector)
@@ -371,9 +375,9 @@ def stitch(image_files, save_path=None):
     return full_classification
 
 
-#### Compiles the subimages of a split
 def compile_subimages(subimage_list, num_x_subimages, num_y_subimages, bands=1):
     '''
+    Compiles the subimages (i.e. blocks) of a split into one raster
     INPUT:
         subimage_list: the list of subimages, in left to right top to bottom order
         num_x_subimages: number of subimages in the x dimension
