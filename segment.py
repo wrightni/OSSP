@@ -48,18 +48,6 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         dst_file = input_data
         im_block_dict, image_type = load_from_disk(input_data, verbose)
 
-
-    #### Check for empty image data, if found, save placeholder watershed
-    # if im_block_dict == None and np.sum(full_band) == 0:
-    #     if verbose: print "Saving output files..."
-    #     placeholder_data = {1:full_band}
-    #     placeholder_watershed = np.zeros(np.shape(full_band))
-    #     write_to_hdf5(placeholder_data, placeholder_watershed, dst_filename,
-    #                     image_type, image_data, [num_x_subimages,num_y_subimages])
-    #     if verbose: print "Done."
-    #     return None
-    # elif im_block_dict == None:
-    #     return  None #why?
  
     #### Define Amplification and Threshold
     # These values are dependent on the type of imagery being processed, and are
@@ -74,31 +62,28 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         amplification_factor = 3.
         band_list = [5,3,2]
     elif image_type == 'srgb':
-        sobel_threshold = 0.1
-        amplification_factor = 3.
+        sobel_threshold = 0.03
+        amplification_factor = 2
         band_list = [3,2,1]
-
 
     #### Segment each image block
     # segmnt_block_queue is a queue that stores the result of the watershed
-    #   segmentation, where each element is one image block. 
+    #   segmentation, where each element is one image block.
     segmnt_block_queue = Queue()
     num_blocks = len(im_block_dict[1])
     block_queue = construct_block_queue(im_block_dict, band_list, num_blocks)
-    # im_block_dict = None
 
-    
     # Define the number of threads to create
     NUMBER_OF_PROCESSES = threads
-    block_procs = [Process(target=process_block_helper, 
-                           args=(block_queue, segmnt_block_queue, 
+    block_procs = [Process(target=process_block_helper,
+                           args=(block_queue, segmnt_block_queue,
                                  sobel_threshold, amplification_factor))
                    for _ in range(NUMBER_OF_PROCESSES)]
-    
-    # Start the worker processes. 
+
+    # Start the worker processes.
     for proc in block_procs:
-        # Add a stop command to the end of the queue for each of the 
-        #   processes started. This will signal for the process to stop. 
+        # Add a stop command to the end of the queue for each of the
+        #   processes started. This will signal for the process to stop.
         block_queue.put('STOP')
         # Start the process
         proc.start()
@@ -113,11 +98,11 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         else:
             pbar = tqdm(total=num_blocks, unit='block')
 
-    # Each process adds the output values to segmnt_block_queue when it 
-    #   finishes a row. Adds 'None' when there are no more rows left 
-    #   in the queue. 
+    # Each process adds the output values to segmnt_block_queue when it
+    #   finishes a row. Adds 'None' when there are no more rows left
+    #   in the queue.
     # This loop continues as long as all of the processes have not finished
-    #   (i.e. fewer than NUMBER_OF_PROCESSES have returned None). When a row is 
+    #   (i.e. fewer than NUMBER_OF_PROCESSES have returned None). When a row is
     #   added to the output list, the tqdm progress bar updates.
 
     # Initialize the output dataset as an empty list of length = input dataset
@@ -136,7 +121,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
                 if verbose: pbar.update()
 
     # Close the progress bar
-    if verbose: 
+    if verbose:
         pbar.close()
         print "Finished Processing. Closing threads..."
 
@@ -144,9 +129,13 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     for proc in block_procs:
         proc.join()
 
+    # Method that provides the user an option to view the original image
+    #  side by side with the segmented image.
     while test_check:
         test_check = check_results(im_block_dict,segmnt_block_list)
-
+    # Writes the segmented data to disk. Used for providing segments to the
+    #  training gui and when the image is split into multiple parts. Return None
+    #  because data will be read from disk later.
     if write_results:
         write_to_hdf5(segmnt_block_list, dst_file)
         return None, None
@@ -157,7 +146,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
 def construct_block_queue(im_block_dict,band_list,size):
     '''
     Constructs a multiprocessing queue from a list of image blocks, where
-        each item in the queue is a single block and its list index. 
+        each item in the queue is a single block and its list index.
     '''
     # Create a multiprocessing Queue
     block_queue = Queue()
@@ -169,15 +158,15 @@ def construct_block_queue(im_block_dict,band_list,size):
     return block_queue
 
 
-def process_block_helper(im_block_queue, segmented_blocks, 
+def process_block_helper(im_block_queue, segmented_blocks,
                          s_threshold, amp_factor):
     '''
     Function run by each thread. Acquires the next block from im_block_queue and
-        gives it to process_block(). Continues until there are no more 
-        blocks left in the queue. 
+        gives it to process_block(). Continues until there are no more
+        blocks left in the queue.
     '''
     # Read the next item in the queue until the 'STOP' command has been
-    #  reached. 
+    #  reached.
     for block_num, block in iter(im_block_queue.get, 'STOP'):
         # Process the next block of data
         result = watershed_transformation(block, s_threshold, amp_factor)
@@ -193,23 +182,25 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         1. Create a gradient image using the sobel algorithm
         2. Adjust the gradient image based on given threshold and amplification.
         3. Find the local minimum gradient values and place a marker
-        4. Construct watersheds on top of the gradient image starting at the 
+        4. Construct watersheds on top of the gradient image starting at the
             markers.
         5. Recombine neighboring image segments using a region adjacency graph.
     '''
     # If this block has no data, return a placeholder watershed.
     if np.amax(image_data[0]) <= 1:
-        return np.zeros(np.shape(image_data))
+        # We just need the dimensions from one band
+        return np.zeros(np.shape(image_data[0]))
 
     # Create a gradient image using a sobel filter
     sobel_image = filters.sobel(image_data[2])
 
     # Adjust the sobel image based on the given threshold and amp factor.
-    upper_threshold = np.amax(sobel_image)/amplification_factor
-    if upper_threshold < 0.20:
-        upper_threshold = 0.20
-    sobel_image = exposure.rescale_intensity(sobel_image, 
-                                             in_range=(0,upper_threshold), 
+    upper_threshold = 255./amplification_factor
+
+    if upper_threshold < 50:
+        upper_threshold = 50
+    sobel_image = exposure.rescale_intensity(sobel_image,
+                                             in_range=(0,upper_threshold),
                                              out_range=(0,1))
 
     # Prevent the watersheds from 'leaking' along the sides of the image
@@ -218,7 +209,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     sobel_image[0,:] = 1
     sobel_image[-1,:] = 1
 
-    # Set all values in the sobel image that are lower than the 
+    # Set all values in the sobel image that are lower than the
     #   given threshold to zero.
     sobel_image[sobel_image<=sobel_threshold]=0
 
@@ -227,7 +218,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
     inv_sobel = 1-sobel_image
-    local_min = feature.peak_local_max(inv_sobel, min_distance=2, 
+    local_min = feature.peak_local_max(inv_sobel, min_distance=3,
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
 
@@ -247,24 +238,28 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     #   orthorectification) to one value, at the end of the watershed list.
     im_watersheds[empty_pixels] = np.amax(im_watersheds)+1
 
-    # Recombine segments that are adjacent and similar to each other. 
-    #   Created a region adjacency graph. Create_composite() takes a single list 
-    #   of bands
-    color_im = utils.create_composite([image_data[0], image_data[1], image_data[2]])
-
-    # Clear image data
-    image_data = None
-    # Create the region adjacency graph based on the color image
-    try:
-        im_graph = graph.rag_mean_color(color_im,im_watersheds)
-    except KeyError:
-        pass
-    else:
-        # Clear color image data
-        color_im = None
-        # Combine segments that are adjacent and whose pixel intensity 
-        #   difference is less than 10. 
-        im_watersheds = graph.cut_threshold(im_watersheds,im_graph,5.0)
+    # *********************************
+    # Removed 8/17/18: Segment recombination was not necessary for icebridge srgb images.
+    #   It added a lot of computation time and very little benefit. Need to test this
+    #   on other imagery types before permanently removing this block of code.
+    # *********************************
+    # # Recombine segments that are adjacent and similar to each other.
+    # #   Created a region adjacency graph. Create_composite() takes a single list
+    # #   of bands
+    # color_im = utils.create_composite([image_data[2], image_data[1], image_data[0]])
+    # # Clear image data
+    # image_data = None
+    # # Create the region adjacency graph based on the color image
+    # try:
+    #     im_graph = graph.rag_mean_color(color_im,im_watersheds)
+    # except KeyError:
+    #     pass
+    # else:
+    #     # Clear color image data
+    #     # color_im = None
+    #     # Combine segments that are adjacent and whose pixel intensity
+    #     #   difference is less than 10.
+    #     im_watersheds = graph.cut_threshold(im_watersheds,im_graph,10.0)
 
     return im_watersheds
 
