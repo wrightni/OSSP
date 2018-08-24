@@ -1,17 +1,21 @@
-#title: Random Forest Classifier
-#author: Nick Wright
+# title: Random Forest Classifier
+# author: Nick Wright
 
 import argparse
 from multiprocessing import Process, Queue
+from ctypes import *
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 import matplotlib.pyplot as plt
 from skimage.filters.rank import entropy
-from skimage.morphology import disk
+import skimage.morphology as morph
 
-from lib import utils, feature_calculations
+from lib import utils, debug_tools
+from lib import attribute_calculations as attr_calc
+from lib import create_clsf_raster as ccr
+from lib import feature_calculations    # soon to be removed
 
 # tqdm for progress bar
 
@@ -22,7 +26,7 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     Run a random forest classification. 
     Input: 
         input_image: preprocessed image data (preprocess.py)
-        watershed_image: Image objects created with the segmentation 
+        watershed_image: Image objects created with the segmentation
             algorithm. (segment.py)
         training_dataset: Tuple of training data in the form:
             (label_vector, attribute_matrix)
@@ -50,36 +54,15 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     label_vector = training_dataset[0]
     training_feature_matrix = training_dataset[1]
 
-    #Method for assessing the quality of the training dataset. 
+    # Method for assessing the quality of the training dataset.
     if quality_control == True:
-        test_training(label_vector, training_feature_matrix)
+        debug_tools.test_training(label_vector, training_feature_matrix)
         aa = raw_input("Continue? ")
         if aa == 'n':
             quit()
 
-    # # If there is no information in this image file, save a dummy classified image and exit
-    # # This can often happen depending on the original image dimensions and the amount it was split
-    # if np.sum(band_1) == 0:
-    #     classified_image_path = os.path.join(output_filepath, output_filename + '_classified_image.png')
-    #     outfile = h5py.File(os.path.join(output_filepath, output_filename + '_classified.h5'),'w')
-        
-    #     if im_type == 'wv02_ms':
-    #             empty_bands = np.zeros(np.shape(band_1)[0],np.shape(band_1)[1],8)
-    #                     empty_image = utils.compile_subimages(empty_bands, num_x_subimages, num_y_subimages, 8)
-    #             elif im_type == 'srgb':
-    #                     empty_bands = np.zeros(np.shape(band_1)[0],np.shape(band_1)[1],3)
-    #                     empty_image = utils.compile_subimages(empty_bands, num_x_subimages, num_y_subimages, 3)
-    #             elif im_type == 'pan':
-    #                     empty_image = np.zeros(np.shape(band_1))
-        
-    #     outfile.create_dataset('classified', data=empty_image,compression='gzip',compression_opts=9)
-    #     outfile.create_dataset('original', data=empty_image,compression='gzip',compression_opts=9)
-    #     outfile.close()
-    #     # return a 1x5 array with values of one for the pixel counts
-    #     return output_filename, np.ones(5)
-
     #### Construct the random forest decision tree using the training data set
-    rfc = RandomForestClassifier()
+    rfc = RandomForestClassifier(n_estimators=100)
     rfc.fit(training_feature_matrix, label_vector)
 
     #### Classify each image block
@@ -147,32 +130,6 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     return clsf_block_list
 
 
-    # # Lite version: Save only the classified output, and do not save the original image data
-    # compiled_classified = utils.compile_subimages(classified_image, num_x_subimages, num_y_subimages, 1)
-    #
-    # if verbose: print "Saving..."
-    #
-    # with h5py.File(os.path.join(output_filepath, output_filename + '_classified.h5'),'w') as outfile:
-    #     outfile.create_dataset('classified', data=compiled_classified,compression='gzip',compression_opts=9)
-    #
-    # #### Count the number of pixels that were in each classification category.
-    # sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow = utils.count_features(compiled_classified)
-    # pixel_counts = [sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow]
-    #
-    # # Clear the image datasets from memory
-    # compiled_classified = None
-    # input_image = None
-    # watershed_image = None
-    #
-    # cur_image = None
-    # cur_ws = None
-    # entropy_image = None
-    #
-    # if verbose: print "Done."
-    #
-    # return output_filename, pixel_counts
-
-
 def construct_block_queue(image_block_list, watershed_block_list, size):
     '''
     Constructs a multiprocessing queue that contains all of the data needed to
@@ -212,6 +169,10 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
 
     clsf_block = []
 
+    # Cast data as C int.
+    image_block = np.ndarray.astype(image_block, c_int)
+    watershed_block = np.ndarray.astype(watershed_block, c_int)
+
     ## If the block contains no data, set the classification values to 0 
     if np.amax(image_block) < 2:
         clsf_block = np.zeros(np.shape(image_block)[0:2])
@@ -221,26 +182,24 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     #   label image down so that the first label is 0, if it isn't already. 
     if np.amin(watershed_block) > 0:
         watershed_block -= np.amin(watershed_block)
-
     ## Calculate the features of each segment within the block. This 
     #   calculation is unique for each image type. 
     if image_type == 'wv02_ms':
         input_feature_matrix = feature_calculations.analyze_ms_image(
                                 image_block, watershed_block)
     elif image_type == 'srgb':
-        entropy_image = entropy(image_block[:,:,0], disk(4))
-        input_feature_matrix = feature_calculations.analyze_srgb_image(
-                                image_block, watershed_block, entropy_image)
+        input_feature_matrix = attr_calc.analyze_srgb_image(image_block,watershed_block)
     elif image_type == 'pan':
-        entropy_image = entropy(image_block[:,:,0], disk(4))
+        entropy_image = entropy(image_block[:,:,0], morph.disk(4))
         input_feature_matrix = feature_calculations.analyze_pan_image(
                                 image_block, watershed_block, 
                                 entropy_image, image_date)
 
     input_feature_matrix = np.array(input_feature_matrix)
 
-    ## Predict the classification of each segment
+    # Predict the classification of each segment
     ws_predictions = rfc.predict(input_feature_matrix)
+    ws_predictions = np.ndarray.astype(ws_predictions,dtype=c_int)
 
     # Create the classified image by replacing watershed id's with 
     #   classification values.
@@ -249,104 +208,11 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     # if image_type == 'pan':
     #     clsf_block = create_clsf_raster(ws_predictions, watershed_block, 
     #                                     image_block)
-    # else:
-    clsf_block = create_clsf_raster(ws_predictions, watershed_block, 
-                                    image_block)
+
+    clsf_block = ccr.create_clsf_raster(ws_predictions, image_block,
+                                        watershed_block)
+    # clsf_block = ccr.filter_small_segments(clsf_block)
     return clsf_block
-
-
-def create_clsf_raster(prediction, watershed_block, image_block):
-    '''
-    Transfer classified results from a list of segment:classification pairs
-        to a raster where pixel values are the classification result. 
-    '''
-    # Create a blank image that we will assign values based on the prediction for each
-    #   watershed. 
-    clsf_block = np.zeros(np.shape(image_block[:,:,0]),dtype=np.uint8)
-    
-    # Check to see if the whole block is one segment
-    if np.amax(watershed_block) == 1:
-        # Assign the prediction for that one segment to the whole image
-        clsf_block = clsf_block + prediction[0]
-        clsf_block[(image_block[:,:,0] == 0)
-                   & (image_block[:,:,1] == 0)
-                   & (image_block[:,:,2] == 0)] = 0
-        return clsf_block
-
-    # Watershed indexes start at 0, so we have to add 1 to get the number. 
-    num_watersheds = int(np.amax(watershed_block)+1)
-
-    ## Assign all segments to their predicted classification
-    for ws in range(num_watersheds):
-        clsf_block[watershed_block==ws] = prediction[ws]
-
-    ## Go through each watershed again, and reassign the ones who's size is 
-    #   less than 5 pixels. This must be a second loop because the whole
-    #   classified raster must be created before we can reassign small segments
-    for ws in range(num_watersheds):
-        # This is a matrix of True and False, where True corresponds to the 
-        #   pixels that have the value of ws
-        current_ws = watershed_block==ws
-        ws_size = np.sum(current_ws)
-
-        # If an object is smaller than 5 pixels, and completely surrounded by 
-        #   a (different) single category, reassign the small object to be the 
-        #   same classification as the surrounding area. 
-        if ws_size <= 5 and ws_size != 0:
-            # Finding the x/y coordinates of the watershed
-            index = np.where(current_ws)
-            # Reassigns the watershed based on the neighboring pixels
-            neighbor_values = neighbor_pixels(clsf_block, index)
-            if neighbor_values == 0:
-                clsf_block[current_ws] = 0
-            elif neighbor_values == 1:
-                clsf_block[current_ws] = 1
-            elif neighbor_values == 2:
-                clsf_block[current_ws] = 2
-            elif neighbor_values == 3:
-                clsf_block[current_ws] = 3
-            elif neighbor_values == 4:
-                clsf_block[current_ws] = 4
-
-    # Setting the empty pixels (at least 3 bands have values of 0) to 0
-    clsf_block[(image_block[:,:,0] == 0)
-               & (image_block[:,:,1] == 0)
-               & (image_block[:,:,2] == 0)] = 0
-
-    # Shadow is being reassigned to ice and snow. 
-    # clsf_block[clsf_block==5] = 1
-
-    return clsf_block
-
-
-def neighbor_pixels(image_block, index):
-    '''
-    Finds the average value of pixels surrounding the given watershed
-    '''
-    pixel_values = []
-    
-    top = [index[0][0], index[1][0]]
-    bottom = [index[0][-1], index[1][-1]]
-    right = [index[0][np.where(index[1] == np.amax(index[1]))], 
-             index[1][np.where(index[1] == np.amax(index[1]))]]
-    left = [index[0][np.where(index[1] == np.amin(index[1]))], 
-            index[1][np.where(index[1] == np.amin(index[1]))]]
-
-    if left[1][0] < 2:
-        left[1][0] = 2
-    if right[1][0] > 253:
-        right[1][0] = 253
-    if top[0] < 2:
-        top[0] = 2
-    if bottom[0] > 253:
-        bottom[0] = 253
-    pixel_values.append(image_block[left[0][0],left[1][0]-2])
-    pixel_values.append(image_block[right[0][0],right[1][0]+2])
-    pixel_values.append(image_block[top[0]-2,top[1]])
-    pixel_values.append(image_block[bottom[0]+2,bottom[1]])
-    
-    pixel_average = np.average(pixel_values)
-    return pixel_average
 
 
 def plot_confusion_matrix(y_pred, y):
