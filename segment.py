@@ -8,14 +8,14 @@ import numpy as np
 import os
 import h5py
 from multiprocessing import Process, Queue
-
 from skimage import filters, morphology, feature, exposure
-from skimage.future import graph
 from scipy import ndimage
-
 from lib import utils
 from lib import debug_tools
 
+# For Testing:
+# from skimage import segmentation
+# import matplotlib.image as mimg
 # tqdm for progress bar
 
 
@@ -132,7 +132,22 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     # Method that provides the user an option to view the original image
     #  side by side with the segmented image.
     while test_check:
-        test_check = check_results(im_block_dict,segmnt_block_list)
+        # test_check = check_results(im_block_dict,segmnt_block_list)
+        watershed = segmnt_block_list[0]
+        original_1 = im_block_dict[1][0]
+        original_2 = im_block_dict[2][0]
+        original_3 = im_block_dict[3][0]
+
+        ws_bound = segmentation.find_boundaries(watershed)
+        ws_display = utils.create_composite([original_1, original_2, original_3])
+        ws_display[:, :, 0][ws_bound] = 240
+        ws_display[:, :, 1][ws_bound] = 80
+        ws_display[:, :, 2][ws_bound] = 80
+
+        save_name = '/Volumes/research/NASA-Ames/debugging/segcheck/segs_{}.png'
+        mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+        test_check = False
+
     # Writes the segmented data to disk. Used for providing segments to the
     #  training gui and when the image is split into multiple parts. Return None
     #  because data will be read from disk later.
@@ -191,9 +206,14 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
 
-    # Create a gradient image using a sobel filter
-    sobel_image = filters.sobel(image_data[2])
+    smooth_im_blue = filters.gaussian(image_data[2],sigma=2)
+    smooth_im_red = filters.gaussian(image_data[0],sigma=2)
 
+    # Create a gradient image using a sobel filter
+    sobel_image_blue = filters.scharr(smooth_im_blue)#image_data[2])
+    sobel_image_red = filters.scharr(smooth_im_red)
+
+    sobel_image = sobel_image_blue + np.abs(sobel_image_blue-sobel_image_red)
     # Adjust the sobel image based on the given threshold and amp factor.
     upper_threshold = 255./amplification_factor
 
@@ -201,24 +221,25 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         upper_threshold = 50
     sobel_image = exposure.rescale_intensity(sobel_image,
                                              in_range=(0,upper_threshold),
-                                             out_range=(0,1))
+                                             out_range=(0,255))
 
     # Prevent the watersheds from 'leaking' along the sides of the image
-    sobel_image[:,0] = 1
-    sobel_image[:,-1] = 1
-    sobel_image[0,:] = 1
-    sobel_image[-1,:] = 1
+    sobel_image[:,0] = 1*255
+    sobel_image[:,-1] = 1*255
+    sobel_image[0,:] = 1*255
+    sobel_image[-1,:] = 1*255
 
     # Set all values in the sobel image that are lower than the
     #   given threshold to zero.
+    sobel_threshold *= 255
     sobel_image[sobel_image<=sobel_threshold]=0
 
     #sobel_copy = np.copy(sobel_image)
 
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
-    inv_sobel = 1-sobel_image
-    local_min = feature.peak_local_max(inv_sobel, min_distance=3,
+    inv_sobel = 255-sobel_image
+    local_min = feature.peak_local_max(inv_sobel, min_distance=5,
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
 
@@ -226,6 +247,10 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     im_watersheds = morphology.watershed(sobel_image,markers)
     im_watersheds = np.array(im_watersheds,dtype='uint16')
     # Clear gradient image data
+
+    # save_name = '/Volumes/research/NASA-Ames/debugging/segcheck/gradient.png'
+    # mimg.imsave(save_name, sobel_image, format='png')
+
     sobel_image = None
 
     # Find the locations that contain no spectral data
