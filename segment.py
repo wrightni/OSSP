@@ -14,8 +14,8 @@ from lib import utils
 from lib import debug_tools
 
 # For Testing:
-# from skimage import segmentation
-# import matplotlib.image as mimg
+from skimage import segmentation
+import matplotlib.image as mimg
 # tqdm for progress bar
 
 
@@ -63,7 +63,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.03
-        amplification_factor = 2
+        amplification_factor = 2.5
         band_list = [3,2,1]
 
     #### Segment each image block
@@ -131,6 +131,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
 
     # Method that provides the user an option to view the original image
     #  side by side with the segmented image.
+    # test_check = True
     while test_check:
         # test_check = check_results(im_block_dict,segmnt_block_list)
         watershed = segmnt_block_list[0]
@@ -144,7 +145,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         ws_display[:, :, 1][ws_bound] = 80
         ws_display[:, :, 2][ws_bound] = 80
 
-        save_name = '/Volumes/research/NASA-Ames/debugging/segcheck/segs_{}.png'
+        save_name = 'E:\NASA-Ames\debugging\segcheck\segs_{}.png'
         mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
         test_check = False
 
@@ -245,7 +246,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
 
     # Build a watershed from the markers on top of the edge image
     im_watersheds = morphology.watershed(sobel_image,markers)
-    im_watersheds = np.array(im_watersheds,dtype='uint16')
+    im_watersheds = np.array(im_watersheds,dtype='uint32')
     # Clear gradient image data
 
     # save_name = '/Volumes/research/NASA-Ames/debugging/segcheck/gradient.png'
@@ -285,7 +286,6 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     #     # Combine segments that are adjacent and whose pixel intensity
     #     #   difference is less than 10.
     #     im_watersheds = graph.cut_threshold(im_watersheds,im_graph,10.0)
-
     return im_watersheds
 
         
