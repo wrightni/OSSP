@@ -30,7 +30,7 @@ For detailed usage and installation instructions, see the pdf document 'Algorith
 
 ### setup.py
 
-The first step is to run the setup.py script to compile C libraries. Run >__python setup.py build\_ext --build-lib .__ from the OSSP directory.
+The first step is to run the setup.py script to compile C libraries. Run __python setup.py build\_ext --build-lib .__ from the OSSP directory.
 
 ### ossp_process.py
 
