@@ -28,6 +28,10 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 
 For detailed usage and installation instructions, see the pdf document 'Algorithm_Instructions.pdf'
 
+#### setup.py
+
+The first step is to run the setup.py script to compile C libraries. __Run python setup.py build\_ext --build-lib .__ from the OSSP directory.
+
 ### ossp_process.py
 
 This combines all steps of the image classification scheme into one script. This script finds all appropriately formatted files in the input directory (.tif(f) and .jpg) and queues them for processing. For each image, this script processes them as follows: Image subdivision (if chosen) and preprocessing (preprocess) -> segmentation (segment.py) -> classification (classify.py) -> calculate statistics -> recompile image subdivisions (if present). ossp\_process.py is able to utilize more than one core of the processor by creating multiple threads. Use the --parallel option to select the number of threads to create.
