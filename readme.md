@@ -28,9 +28,9 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 
 For detailed usage and installation instructions, see the pdf document 'Algorithm_Instructions.pdf'
 
-#### setup.py
+### setup.py
 
-The first step is to run the setup.py script to compile C libraries. __Run python setup.py build\_ext --build-lib .__ from the OSSP directory.
+The first step is to run the setup.py script to compile C libraries. Run >__python setup.py build\_ext --build-lib .__ from the OSSP directory.
 
 ### ossp_process.py
 
