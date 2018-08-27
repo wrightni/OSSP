@@ -22,7 +22,7 @@ def create_clsf_raster(int [:] prediction,
     # Watershed indexes start at 0, so we have to add 1 to get the number. 
     num_ws = np.amax(label_image_view) + 1
     x_dim, y_dim = np.shape(intensity_image_view)[0:2]
-    # Check to see if the whole block is one segment (why 2?)
+    # Check to see if the whole block is one segment
     if num_ws >= 2:
         # Assign all segments to their predicted classification
         for y in range(y_dim):
