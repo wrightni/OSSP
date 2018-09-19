@@ -13,35 +13,41 @@ def create_clsf_raster(int [:] prediction,
     cdef int num_ws
     cdef int y,x
     cdef int x_dim, y_dim
+    cdef int band_list[3]
 
     # Create a blank image that we will assign values based on the prediction for each
-    #   watershed. 
-    clsf_block = np.empty(np.shape(intensity_image_view[:,:,0]), dtype=c_int)
+    #   watershed.
+    x_dim, y_dim, num_bands = np.shape(intensity_image_view)
+    clsf_block = np.empty((x_dim,y_dim), dtype=c_int)
     cdef int [:, :] clsf_block_view = clsf_block
     
     # Watershed indexes start at 0, so we have to add 1 to get the number. 
     num_ws = np.amax(label_image_view) + 1
-    x_dim, y_dim = np.shape(intensity_image_view)[0:2]
+
+    if num_bands == 1:
+        band_list = [0,0,0]
+    else:
+        band_list = [0,1,2]
     # Check to see if the whole block is one segment
     if num_ws >= 2:
         # Assign all segments to their predicted classification
         for y in range(y_dim):
             for x in range(x_dim):
                 # Setting the empty pixels (at least 3 bands have values of 0) to 0
-                if ((intensity_image_view[x,y,0] == 0)
-                    & (intensity_image_view[x,y,1] == 0)
-                    & (intensity_image_view[x,y,2] == 0)):
+                if ((intensity_image_view[x,y,band_list[0]] == 0)
+                    & (intensity_image_view[x,y,band_list[1]] == 0)
+                    & (intensity_image_view[x,y,band_list[2]] == 0)):
                     clsf_block_view[x,y] = 0
                 else:
                     clsf_block_view[x,y] = prediction[label_image_view[x,y]]
     else:
-        # Assign the prediction for that one segment to the whole image
+        # Assign all segments to their predicted classification
         for y in range(y_dim):
             for x in range(x_dim):
                 # Set the empty pixels (at least 3 bands have values of 0) to 0
-                if ((intensity_image_view[x,y,0] == 0)
-                    & (intensity_image_view[x,y,1] == 0)
-                    & (intensity_image_view[x,y,2] == 0)):
+                if ((intensity_image_view[x,y,band_list[0]] == 0)
+                    & (intensity_image_view[x,y,band_list[1]] == 0)
+                    & (intensity_image_view[x,y,band_list[2]] == 0)):
                     clsf_block_view[x,y] = 0
                 else:
                     clsf_block_view[x,y] = prediction[0]

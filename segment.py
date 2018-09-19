@@ -63,7 +63,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.03
-        amplification_factor = 2.5
+        amplification_factor = 3.2
         band_list = [3,2,1]
 
     #### Segment each image block
@@ -318,9 +318,11 @@ def load_from_disk(hdf5_file, verbose):
         num_bands = len(datasets)
         if 'watershed' in datasets:
             num_bands -= 1
+        if 'dimensions' in datasets:
+            num_bands -= 1
 
         for b in range(1,num_bands+1):
-            dataset_name = 'original_' + str(b)
+            dataset_name = 'original_{}'.format(b)
             band = f[dataset_name][:]
             all_band_blocks[b] = band
             # debug_tools.display_histogram(band[40])

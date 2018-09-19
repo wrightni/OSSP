@@ -55,6 +55,7 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     training_feature_matrix = training_dataset[1]
 
     # Method for assessing the quality of the training dataset.
+    quality_control = True
     if quality_control == True:
         debug_tools.test_training(label_vector, training_feature_matrix)
         aa = raw_input("Continue? ")
@@ -185,15 +186,13 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     ## Calculate the features of each segment within the block. This 
     #   calculation is unique for each image type. 
     if image_type == 'wv02_ms':
-        input_feature_matrix = feature_calculations.analyze_ms_image(
+        input_feature_matrix = attr_calc.analyze_ms_image(
                                 image_block, watershed_block)
     elif image_type == 'srgb':
         input_feature_matrix = attr_calc.analyze_srgb_image(image_block,watershed_block)
     elif image_type == 'pan':
-        entropy_image = entropy(image_block[:,:,0], morph.disk(4))
-        input_feature_matrix = feature_calculations.analyze_pan_image(
-                                image_block, watershed_block, 
-                                entropy_image, image_date)
+        input_feature_matrix = attr_calc.analyze_pan_image(
+                                image_block, watershed_block, image_date)
 
     input_feature_matrix = np.array(input_feature_matrix)
 

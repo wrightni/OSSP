@@ -95,10 +95,153 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     return feature_matrix
 
 
-# def analyze_pan_image()
-    # Transfer this from old method
-# def analyse_ms_image()
-    # Transfer this from old method
+def analyze_ms_image(input_image, watershed_image, segment_id=False):
+    '''
+    Cacluate the attributes for each segment given in watershed_image
+    using the raw pixel values in input image. Attributes calculated for
+    multispectral type WorldView 2 images.
+    '''
+    feature_matrix = []
+
+    cdef int num_ws
+    cdef int x_dim, y_dim, num_bands
+    cdef double features[18]
+    cdef int ws, b
+    # cdef int histogram_i
+    # cdef int histogram_e
+   
+    # If no segment id is provided, analyze the features for every watershed
+    # in the input image. If a segment id is provided, just analyze the features
+    # for that one segment.
+    # We have to add +1 to num_ws because if the maximum value in watershed_image
+    # is 500, then there are 501 total watersheds Sum(0,1,...,499,500) = 500+1
+    if segment_id == False:
+        num_ws = int(np.amax(watershed_image) + 1)
+    else:
+        num_ws = 1
+
+    x_dim, y_dim, num_bands = np.shape(input_image)
+
+   #### Need to convert images to dtype c_int
+    # input_image = np.ndarray.astype(input_image, c_int)
+    # watershed_image = np.ndarray.astype(watershed_image, c_int)
+    if segment_id is not False:
+        internal, external = selective_pixel_sort(input_image, watershed_image,
+                                    x_dim, y_dim, num_bands, segment_id)
+    else:
+        internal, external = pixel_sort(input_image, watershed_image,
+                                        x_dim, y_dim,
+                                        num_ws, num_bands)
+
+    for ws in range(num_ws):
+
+        # Average Pixel Intensity of each band
+        for b in range(7):
+            features[b] = np.average(internal[b][ws])
+            if features[b] < 1:
+                features[b] = 1
+
+        # Important band ratios
+        features[8] = (features[0] / features[2])
+        features[9] = (features[1] / features[6])
+        features[10] = (features[4] / features[6])
+        features[11] = (features[3] / features[5])
+        features[12] = (features[3] / features[6])
+        features[13] = (features[3] / features[7])
+        features[14] = (features[4] / features[6])
+
+        # N. Average Intensity 
+        features[15] = np.average(external[4][ws])
+
+        # b1-b7 / b1+b7
+        features[16] = ((features[0] - features[6]) / (features[0] + features[6]))
+        # b3-b5 / b3+b5
+        features[17] = ((features[2] - features[4]) / (features[2] + features[4]))
+
+        feature_matrix.append(features)
+
+    return feature_matrix
+
+
+def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
+    '''
+    Cacluate the attributes for each segment given in watershed_image
+    using the raw pixel values in input image. Attributes calculated for
+    srgb type images.
+    '''
+    feature_matrix = []
+
+    cdef int num_ws
+    cdef int x_dim, y_dim, num_bands
+    cdef double features[12]
+    cdef int ws, b
+    # cdef int histogram_i
+    # cdef int histogram_e
+   
+    # If no segment id is provided, analyze the features for every watershed
+    # in the input image. If a segment id is provided, just analyze the features
+    # for that one segment.
+    # We have to add +1 to num_ws because if the maximum value in watershed_image
+    # is 500, then there are 501 total watersheds Sum(0,1,...,499,500) = 500+1
+    if segment_id == False:
+        num_ws = int(np.amax(watershed_image) + 1)
+    else:
+        num_ws = 1
+
+    x_dim, y_dim, num_bands = np.shape(input_image)
+
+   #### Need to convert images to dtype c_int
+    # input_image = np.ndarray.astype(input_image, c_int)
+    # watershed_image = np.ndarray.astype(watershed_image, c_int)
+    if segment_id is not False:
+        internal, external = selective_pixel_sort(input_image, watershed_image,
+                                    x_dim, y_dim, num_bands, segment_id)
+    else:
+        internal, external = pixel_sort(input_image, watershed_image,
+                                        x_dim, y_dim,
+                                        num_ws, num_bands)
+    print np.shape(external)
+    print np.shape(external[0])
+    print external[0][10]
+    for ws in range(num_ws):
+
+        # Average Pixel Intensity
+        features[0] = np.average(internal[0][ws])
+        if features[0] < 1:
+            features[0] = 1
+
+        # Median Pixel Value
+        features[1] = np.median(internal[0][ws])
+        # Segment Minimum
+        features[2] = np.amin(internal[0][ws])
+        # Segment Maximum
+        features[3] = np.amax(internal[0][ws])
+        # Standard Deviation
+        features[4] = np.std(internal[0][ws])
+        # Size
+        features[5] = len(internal[0][ws])
+
+        # Entropy
+        histogram_i = np.bincount(internal[0][ws])
+        features[6] = spstats.entropy(histogram_i,base=2)
+
+        ## Neighborhood Values
+        # N. Average Intensity
+        features[7] = np.average(external[0][ws])
+        # N. Standard Deviation
+        features[8] = np.std(external[0][ws])
+        # N. Maximum Single Value
+        features[9] = np.amax(external[0][ws])
+        # N. Entropy
+        histogram_e = np.bincount(external[0][ws])
+        features[10] = spstats.entropy(histogram_e,base=2)
+
+        # Date of image acquisition
+        features[11] = int(date)
+
+        feature_matrix.append(features)
+
+    return feature_matrix
 
 
 def selective_pixel_sort(int[:,:,:] intensity_image_view,
@@ -107,7 +250,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
                          int num_bands, int label):
     
     cdef int y,x,i,w,b
-    cdef int window[6]
+    cdef int window[4]
     cdef int sn
 
     # Output variables. 
@@ -116,7 +259,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
     external = [[[]] for _ in range(num_bands)]
 
     # Moving window that defines the neighboring region for each pixel
-    window = [-4, -3, -2, 2, 3, 4]
+    window = [-4, -3, 3, 4]
 
     for y in range(y_dim):
         for x in range(x_dim):
@@ -166,7 +309,7 @@ def pixel_sort(int[:,:,:] intensity_image_view,
             of intensity values that are adjacent to that label number.
     '''
     cdef int y,x,i,w
-    cdef int window[6]
+    cdef int window[4]
     cdef int sn
 
     # Output variables. 
@@ -181,7 +324,7 @@ def pixel_sort(int[:,:,:] intensity_image_view,
     # cdef int [:] external_view = external
 
     # Moving window that defines the neighboring region for each pixel
-    window = [-4, -3, -2, 2, 3, 4]
+    window = [-4, -3, 3, 4]
 
     for y in range(y_dim):
         for x in range(x_dim):

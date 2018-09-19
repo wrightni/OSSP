@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.image as mimg
+from ctypes import *
 
 #
 valid_extensions = ['.tif','.tiff','.jpg']
@@ -463,12 +464,24 @@ def count_features(classified_image):
 
     return sum_snow, sum_gray_ice, sum_melt_ponds, sum_open_water, sum_shadow
 
-# Code from http://chriskiehl.com/article/parallelism-in-one-line/
-# Returns a list of .h5 files in the given folder.
-def get_image_paths(folder,keyword='.h5'):
-    return (os.path.join(folder, f)
-        for f in os.listdir(folder)
-        if keyword in f.lower())
+
+def get_image_paths(folder,keyword='.h5',strict=True):
+    '''
+    Code from http://chriskiehl.com/article/parallelism-in-one-line/
+    Returns a list of .h5 files in the given folder.
+    Strict flag restricts keyword to the extension, non strict will find the
+        keyword anywhere in the filename
+    '''
+    if strict:
+        return (os.path.join(folder, f)
+            for f in os.listdir(folder)
+            if (keyword in os.path.splitext(f)[1].lower()
+                and os.path.splitext(f)[0][0] != '.'))
+    else:
+        return (os.path.join(folder, f)
+                for f in os.listdir(folder)
+                if (keyword in f.lower()
+                    and os.path.splitext(f)[0][0] != '.'))
 
 # Remove hidden folders and files from the given list of strings (mac)
 def remove_hidden(folder):
@@ -478,6 +491,7 @@ def remove_hidden(folder):
             folder.pop(i)
         else:
             i+=1
+    return folder
 
 # Combines multiple bands (RBG) into one 3D array
 # Adapted from:  http://gis.stackexchange.com/questions/120951/merging-multiple-16-bit-image-bands-to-create-a-true-color-tiff
@@ -503,8 +517,8 @@ def plot_confusion_matrix(cm,categories,ylabel,xlabel,
     Normalization can be applied by setting `normalize=True`.
     """
     font = {'family' : 'Times New Roman',
-        'weight' : 'bold',
-        'size'   : 12}
+            'weight' : 'bold',
+            'size'   : 12}
 
     matplotlib.rc('font', **font)
 

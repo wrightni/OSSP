@@ -5,7 +5,7 @@ except ImportError:
     from distutils.core import setup
     from distutils.extension import Extension
 
-USE_CYTHON = False
+USE_CYTHON = True
 
 ext = '.pyx' if USE_CYTHON else '.c'
 
@@ -14,7 +14,7 @@ extensions = [Extension("lib.attribute_calculations", ['lib/attribute_calculatio
 
 if USE_CYTHON:
     from Cython.Build import cythonize
-    extensions = cythonize(extensions)
+    extensions = cythonize(extensions, annotate=True)
 
 setup(
     ext_modules = extensions,

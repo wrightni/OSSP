@@ -8,6 +8,7 @@
 import argparse
 import os
 import math
+import datetime
 import h5py
 import numpy as np
 import matplotlib.image as mimg
@@ -183,7 +184,7 @@ def prepare_image(input_path, image_name, image_type,
             if output_path is not None:
                 # Saves the preprocessed image. Mostly used for
                 # making the images for training set creation.
-                fname = os.path.splitext(image_name)[0] + "_prep.h5"
+                fname = os.path.splitext(image_name)[0] + "_segmented.h5"
                 dst_file = os.path.join(output_path, fname)
                 # Save the data to disk
                 write_to_hdf5(dst_file, bands_output[b], b, image_type,
@@ -295,14 +296,26 @@ def read_metadata(metadata, image_type):
         if image_type == 'srgb':
             header_date = metadata['EXIF_DateTime']
             image_date = header_date[5:7] + header_date[8:10]
+            yyyy = 2014
+            mm = image_date[:2]
+            dd = image_date[2:]
         elif image_type == 'pan' or image_type == 'wv02_ms':
             # image_date = metadata['NITF_STDIDC_ACQUISITION_DATE'][4:8]
-            image_date = metadata['NITF_IDATIM'][4:8]
+            image_date = metadata['NITF_IDATIM'][0:8]
+            yyyy = image_date[0:4]
+            mm = image_date[4:6]
+            dd = image_date[6:]
     except KeyError:
-        image_date = "0601"  # June first
+        # Use June 1 as default date
+        yyyy = 2014
+        mm = 06
+        dd = 01
 
-    image_date = int(image_date)
-    return image_date
+    # Convert the date to julian day format (number of days since Jan 1)
+    d = datetime.date(int(yyyy), int(mm), int(dd))
+    doy = d.toordinal() - datetime.date(d.year, 1, 1).toordinal() + 1
+
+    return doy
 
 
 def find_peaks(hist, bin_centers, image_type):
@@ -318,7 +331,7 @@ def find_peaks(hist, bin_centers, image_type):
     if image_type == 'srgb':
         min_count = 1000
     else:
-        min_count = 100000
+        min_count = 10000
     # First find all potential peaks in the histogram
     peaks = []
     for i in range(1, len(bin_centers) - 1):
@@ -376,7 +389,7 @@ def find_peaks(hist, bin_centers, image_type):
     return peaks
 
 
-def find_threshold(hist, bin_centers, peaks, image_type):
+def find_threshold(hist, bin_centers, peaks, image_type, top=0.1, bottom=0.5):
     """
     Finds the upper and lower threshold for histogram stretching.
     Using the indices of the highest and lowest peak (by intensity, not # of pixels), this searches for an upper
@@ -387,12 +400,12 @@ def find_threshold(hist, bin_centers, peaks, image_type):
 
     max_peak = np.where(bin_centers == peaks[-1])[0][0]  # Max intensity
     thresh_top = max_peak
-    while hist[thresh_top] > hist[max_peak] * 0.1:
+    while hist[thresh_top] > hist[max_peak] * top:
         thresh_top += 2  # Upper limit is less sensitive, so step 2 at a time
 
     min_peak = np.where(bin_centers == peaks[0])[0][0]  # Min intensity
     thresh_bot = min_peak
-    while hist[thresh_bot] > hist[min_peak] * 0.5:
+    while hist[thresh_bot] > hist[min_peak] * bottom:
         thresh_bot -= 1
 
     # Convert the histogram bin index to an intensity value
@@ -553,12 +566,12 @@ def downsample(band, factor):
         where N is factor.
     """
 
-    band_downsample = block_reduce(band, block_size=(factor, factor), func=np.mean)
+    band_downsample = block_reduce(band, block_size=(factor, factor, 3), func=np.mean)
 
     band_copy = np.zeros(np.shape(band))
     for i in range(np.shape(band_downsample)[0]):
         for j in range(np.shape(band_downsample)[1]):
-            band_copy[i * factor:(i * factor) + factor, j * factor:j * factor + factor] = band_downsample[i, j]
+            band_copy[i * factor:(i * factor) + factor, j * factor:j * factor + factor, :] = band_downsample[i, j, :]
 
     return band_copy
 
