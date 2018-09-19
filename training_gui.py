@@ -12,18 +12,17 @@ import tkFont
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-from scipy.misc import bytescale
 import h5py
 import os
 import argparse
-from skimage.filters.rank import entropy
-from skimage.morphology import disk
+from ctypes import *
 
 from preprocess import prepare_image
 from segment import segment_image, load_from_disk
-from lib import utils, feature_calculations
+from lib import utils
+from lib import attribute_calculations as attr_calc
 
 
 #This class structure logic might be a little far-fetched
@@ -40,7 +39,12 @@ class TrainingWindow:
         self.secondary_image = secondary_image
         self.label_vector = label_vector
         self.feature_matrix = feature_matrix
-        self.image_name = str(image_name)
+        # remove "_segmented" from name
+        image_name_split = str(image_name).rsplit('_',1)
+        if "segmented" in image_name_split[1]:
+            self.image_name = image_name_split[0]
+        else:
+            self.image_name = os.path.splitext(image_name)[0]
         # Format of the ID values in segment_list
         # 1: ["image_name", subimage, segment_number]
         # 2: [subimage,x,y]
@@ -159,23 +163,21 @@ class TrainingWindow:
             current_sp = self.sp_buffer
             spPosition = self.sp_buffer
 
-        xMin = np.amin(spPosition[0])-40
-        xMax = np.amax(spPosition[0])+40
-        yMin = np.amin(spPosition[1])-40
-        yMax = np.amax(spPosition[1])+40
+        zoom_size = 100
 
-        if xMin<0:
-            xMin=0
-            xMax=xMin+80
-        if xMax>=np.shape(subimage)[0]:
-            xMax=np.shape(subimage)[0]-1
-            xMin=xMax-80
-        if yMin<0:
-            yMin=0
-            yMax=yMin+80
-        if yMax>=np.shape(subimage)[1]:
-            yMax=np.shape(subimage)[1]-1
-            yMin=yMax-80
+        xMin = np.amin(spPosition[0]) - zoom_size
+        xMax = np.amax(spPosition[0]) + zoom_size
+        yMin = np.amin(spPosition[1]) - zoom_size
+        yMax = np.amax(spPosition[1]) + zoom_size
+
+        if xMin < 0:
+            xMin = 0
+        if xMax >= np.shape(subimage)[0]:
+            xMax = np.shape(subimage)[0] - 1
+        if yMin < 0:
+            yMin = 0
+        if yMax >= np.shape(subimage)[1]:
+            yMax = np.shape(subimage)[1] - 1
 
         #Image 1 (Full zoomed out image)
         full_image = subimage
@@ -216,44 +218,45 @@ Shadow: Surfaces that are covered by a dark shadow.
         #Plotting onto the GUI
         ax = self.fig.add_subplot(2,2,1)
         ax.imshow(color_image,interpolation='None',vmin=0,vmax=255)
-        ax.tick_params(
-        axis='both',          # changes apply to the x-axis
-        which='both',      # both major and minor ticks are affected
-        bottom='off',      # ticks along the bottom edge are off
-        top='off',         # ticks along the top edge are off
-        left='off',
-        right='off',
-        labelleft='off',
-        labelbottom='off')
+        ax.tick_params(axis='both',          # changes apply to the x-axis
+                       which='both',         # both major and minor ticks are affected
+                       bottom='off',         # ticks along the bottom edge are off
+                       top='off',            # ticks along the top edge are off
+                       left='off',
+                       right='off',
+                       labelleft='off',
+                       labelbottom='off')
 
         ax = self.fig.add_subplot(2,2,2)
         ax.imshow(cropped_image,interpolation='None',vmin=0,vmax=255)
-        ax.tick_params(
-        axis='both',          # changes apply to the x-axis
-        which='both',      # both major and minor ticks are affected
-        bottom='off',      # ticks along the bottom edge are off
-        top='off',         # ticks along the top edge are off
-        left='off',
-        right='off',
-        labelleft='off',
-        labelbottom='off')
+        ax.tick_params(axis='both',          # changes apply to the x-axis
+                       which='both',         # both major and minor ticks are affected
+                       bottom='off',         # ticks along the bottom edge are off
+                       top='off',            # ticks along the top edge are off
+                       left='off',
+                       right='off',
+                       labelleft='off',
+                       labelbottom='off')
 
         ax = self.fig.add_subplot(2,2,3)
         ax.imshow(full_image,interpolation='None',vmin=0,vmax=255)
-        ax.axvspan(yMin,yMax,1.-float(xMax)/np.shape(full_image)[0],1.-float(xMin)/np.shape(full_image)[0],color='red',alpha=0.3)
+        ax.axvspan(yMin,
+                   yMax,
+                   1.-float(xMax)/np.shape(full_image)[0],
+                   1.-float(xMin)/np.shape(full_image)[0],
+                   color='red',
+                   alpha=0.3)
         ax.set_xlim([0,np.shape(full_image)[1]])
-        ax.tick_params(
-        axis='both',          # changes apply to the x-axis
-        which='both',      # both major and minor ticks are affected
-        bottom='off',      # ticks along the bottom edge are off
-        top='off',         # ticks along the top edge are off
-        left='off',
-        right='off',
-        labelleft='off',
-        labelbottom='off')
+        ax.tick_params(axis='both',          # changes apply to the x-axis
+                       which='both',         # both major and minor ticks are affected
+                       bottom='off',         # ticks along the bottom edge are off
+                       top='off',            # ticks along the top edge are off
+                       left='off',
+                       right='off',
+                       labelleft='off',
+                       labelbottom='off')
 
         ax = self.fig.add_subplot(2,2,4,adjustable='datalim',frame_on=False)
-        # ax.text(0.5,.9,progress_counter,horizontalalignment='center',verticalalignment='center')
         ax.text(0.5,0.5,instructions,horizontalalignment='center',verticalalignment='center')
         ax.axis('off')
 
@@ -288,7 +291,7 @@ Shadow: Surfaces that are covered by a dark shadow.
 
             # Exit the training window if we have finished the preset list of segments for this
             # image (only used in mode 1)
-            if current_segment[0] != self.image_name:
+            if os.path.splitext(current_segment[0])[0] != self.image_name:
                 print "Finished image %s. Loading next image." %self.image_name
                 self.exit_image()
                 return
@@ -296,31 +299,33 @@ Shadow: Surfaces that are covered by a dark shadow.
             self.sp_buffer = int(current_segment[2])
             self.subimage_index = int(current_segment[1])
 
-            ws_subimage = self.secondary_image[self.subimage_index]
-        
+            # part of readout to user that has been removed:
+            # ws_subimage = self.secondary_image[self.subimage_index]
+            # sp_size = np.sum(ws_subimage==self.sp_buffer)
 
-            sp_size = np.sum(ws_subimage==self.sp_buffer)
-            
+            # ncw 9.17.17: I'm removing this temporarily because it really shouldn't be displayed to the user. We don't
+            #       want people basing their decisions on pixel intensity values, but rather on what the segment looks
+            #       like. Will remove permanently in the future.
             # Finds the average intensities with a bunch of array comparisons
-            if self.im_type == 'wv02_ms': 
-                red_intense = np.mean(self.original_image[self.subimage_index][:,:,5][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                green_intense = np.mean(self.original_image[self.subimage_index][:,:,3][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                blue_intense = np.mean(self.original_image[self.subimage_index][:,:,2][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                print "Super Pixel Size: %s" %sp_size
-                print "Avg R/G/B Intensity: %i/%i/%i" %(red_intense, green_intense, blue_intense)
-            elif self.im_type == 'srgb':
-                red_intense = np.mean(self.original_image[self.subimage_index][:,:,0][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                green_intense = np.mean(self.original_image[self.subimage_index][:,:,1][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                blue_intense = np.mean(self.original_image[self.subimage_index][:,:,2][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                print "Super Pixel Size: %s" %sp_size
-                print "Avg R/G/B Intensity: %i/%i/%i" %(red_intense, green_intense, blue_intense)
-            elif self.im_type == 'pan':
-                intense_mean = np.mean(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                intense_median = np.median(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                intense_min = np.amin(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                intense_max = np.amax(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
-                print "Super Pixel Size: %s" %sp_size
-                print "Mean,Median,Min,Max: %i, %i, %i, %i" %(intense_mean,intense_median,intense_min,intense_max)
+            # if self.im_type == 'wv02_ms':
+            #     red_intense = np.mean(self.original_image[self.subimage_index][:,:,5][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     green_intense = np.mean(self.original_image[self.subimage_index][:,:,3][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     blue_intense = np.mean(self.original_image[self.subimage_index][:,:,2][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     print "Super Pixel Size: %s" %sp_size
+            #     print "Avg R/G/B Intensity: %i/%i/%i" %(red_intense, green_intense, blue_intense)
+            # elif self.im_type == 'srgb':
+            #     red_intense = np.mean(self.original_image[self.subimage_index][:,:,0][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     green_intense = np.mean(self.original_image[self.subimage_index][:,:,1][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     blue_intense = np.mean(self.original_image[self.subimage_index][:,:,2][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     print "Super Pixel Size: %s" %sp_size
+            #     print "Avg R/G/B Intensity: %i/%i/%i" %(red_intense, green_intense, blue_intense)
+            # elif self.im_type == 'pan':
+            #     intense_mean = np.mean(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     intense_median = np.median(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     intense_min = np.amin(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     intense_max = np.amax(self.original_image[self.subimage_index][self.sp_buffer==self.secondary_image[self.subimage_index]])
+            #     print "Super Pixel Size: %s" %sp_size
+            #     print "Mean,Median,Min,Max: %i, %i, %i, %i" %(intense_mean,intense_median,intense_min,intense_max)
         
         if self.mode == 2:
             # Find a new pixel to classify
@@ -353,8 +358,9 @@ Shadow: Surfaces that are covered by a dark shadow.
                 self.subimage_index = int(current_segment[1])
 
             elif self.mode == 2:
-                self.sp_buffer = (segment_list[len(label_vector)][1],segment_list[len(label_vector)][2])
-                self.subimage_index = int(segment_list[len(label_vector)][0])
+                self.sp_buffer = (self.segment_list[len(self.label_vector)][1],
+                                  self.segment_list[len(self.label_vector)][2])
+                self.subimage_index = int(self.segment_list[len(self.label_vector)][0])
             # Redraw the display window with the updated indicies. 
             self.displayImages()
 
@@ -362,94 +368,119 @@ Shadow: Surfaces that are covered by a dark shadow.
     def add_segments(self):
         if self.mode == 1:
 
-            j = 0       #counter to prevent too many loops
             segments_to_add = []
 
-            # Loop through subimage until we find one that next 10 candidate segments
-            while len(segments_to_add)<10:# and j<200:
+            # Pick the next subimage to investigate randomly
+            subimage_id = np.random.randint(0, len(self.original_image))
 
-                # Reset the counter on every subimage attempt
-                segments_to_add = []
-                next_subimage = np.random.randint(0,len(self.original_image))
-                ws_subimage = self.secondary_image[next_subimage]
-                
-                # i = np.random.randint(0,np.amax(ws_subimage))
-                # len_segments = np.sum(ws_subimage==i)
-                # print len_segments
-                # segments_to_add.append([self.image_name, next_subimage, i])
+            a = 0
 
-                # Cycle through every segment in the current image. If the segment matches
-                # our criteria (some dark, some light, some in the middle, and some large)
-                # then we add it to the list. Shuffle the indexes so that we select segments
-                # from random areas in the images
+            # Select random x,y coordinates from the input image, and pick the segment where the random
+            #   pixel lands. This makes the selected segments representative of the average surface
+            #   distribution within the image. This still wont work if the image has a minority of any
+            #   particular surface type.
+            while len(segments_to_add)<10:
+                a += 1
+                x,y,z = np.shape(self.original_image[subimage_id])
+                i = np.random.randint(x)
+                j = np.random.randint(y)
+                # Find the segment label at the random pixel
+                segment_id = self.secondary_image[subimage_id][i][j]
+                sp_size = np.sum(self.secondary_image[subimage_id] == segment_id)
+                if sp_size >= 20:
+                    # Check for a duplicate segment already in the tds
+                    new_segment = [self.image_name,
+                                   "{}".format(subimage_id),
+                                   "{}".format(segment_id)]
+                    if new_segment not in self.segment_list and new_segment not in segments_to_add:
+                        segments_to_add.append(new_segment)
 
-                dark,light,large,middle = 0,0,0,0       # n for each segment type
-
-                index = range(int(np.amax(ws_subimage)))
-                np.random.shuffle(index)
-                for i in index:
-                    sp_size = np.sum(ws_subimage==i)
-                    if sp_size == 0:
-                        continue
-                    if sp_size > 20:
-                        intensity = np.mean(self.original_image[next_subimage][i==ws_subimage])
-                        # Skip blank segments
-                        if intensity < 1:
-                            continue
-                        # Add dark segments
-                        if intensity < 20 and dark<3:
-                            if [self.image_name, next_subimage, i] not in self.segment_list:
-                                segments_to_add.append([self.image_name, next_subimage, i])
-                                dark += 1
-                                continue
-                        # Add bright segments
-                        if intensity > 200 and light<1:
-                            if [self.image_name, next_subimage, i] not in self.segment_list:
-                                segments_to_add.append([self.image_name, next_subimage, i])
-                                light += 1
-                                continue
-                        # Add middle intensity segments
-                        if intensity >= 20 and intensity < 180 and middle<2:
-                            if [self.image_name, next_subimage, i] not in self.segment_list: 
-                                segments_to_add.append([self.image_name, next_subimage, i])
-                                middle += 1
-                                continue
-                        # Add large segments
-                        if sp_size > 200 and large<2:
-                            if [self.image_name, next_subimage, i] not in self.segment_list:
-                                segments_to_add.append([self.image_name, next_subimage, i])
-                                large += 1
-
-                # Use this if statment for large (WV) images that are primarily
-                #   a single surface type. Don't use for smaller aerial images
-                # If we didn't get enough points from each category and we've
-                # tried less than 5 subimage so far, try another one.
-                #if len(segments_to_add)<7 and j<5:
-                #    j+=1
-                #    continue    # We didn't find enough, so restart
-            
-                # Fill out the list with random ones if we got enough, or we've tried many subimages.
-                #   Use j index to prevent this loop from spending too long looking for points. 
-                while (len(segments_to_add)<10 and j<200) and len(segments_to_add)<np.amax(ws_subimage):
-                    i = np.random.randint(np.amax(ws_subimage)+1)
-                    sp_size = np.sum(ws_subimage==i)
-                    if sp_size == 0:
-                        j+=1
-                        continue
-                    intensity = np.mean(self.original_image[next_subimage][i==ws_subimage])
-                    # Make sure they're good segments
-                    if sp_size > 10 and intensity >= 1:
-                        # Prevent adding a duplicate segment
-                        if [self.image_name, next_subimage, i] not in self.segment_list:
-                            segments_to_add.append([self.image_name, next_subimage, i])
-                        else:
-                            j+=1
-                    else:
-                        j+=1
-
-            # Keep only the unique segments
-            # print segments_to_add
+            print("Attempts: {}".format(a))
             self.segment_list += segments_to_add
+
+            # (ncw 9.18.18)
+            #   Old pseudorandom method for selecting segments to classify is below. This takes a really long time
+            #   to run on larger subimage sizes. The following code needs to be reworked in order to implement it again.
+            #   Also need to consider how the pseudorandom selection works to ensure that a proper representation of
+            #   image segments is created.
+
+            #     # i = np.random.randint(0,np.amax(ws_subimage))
+            #     # len_segments = np.sum(ws_subimage==i)
+            #     # print len_segments
+            #     # segments_to_add.append([self.image_name, next_subimage, i])
+            #
+            #     # Cycle through every segment in the current image. If the segment matches
+            #     # our criteria (some dark, some light, some in the middle, and some large)
+            #     # then we add it to the list. Shuffle the indexes so that we select segments
+            #     # from random areas in the images
+            #
+            #     dark,light,large,middle = 0,0,0,0       # n for each segment type
+            #
+            #     index = range(int(np.amax(ws_subimage)))
+            #     np.random.shuffle(index)
+            #     for i in index:
+            #         sp_size = np.sum(ws_subimage==i)
+            #         if sp_size == 0:
+            #             continue
+            #         if sp_size > 20:
+            #             intensity = np.mean(self.original_image[next_subimage][i==ws_subimage])
+            #             # Skip blank segments
+            #             if intensity < 1:
+            #                 continue
+            #             # Add dark segments
+            #             if intensity < 20 and dark<3:
+            #                 if [self.image_name, next_subimage, i] not in self.segment_list:
+            #                     segments_to_add.append([self.image_name, next_subimage, i])
+            #                     dark += 1
+            #                     continue
+            #             # Add bright segments
+            #             if intensity > 200 and light<1:
+            #                 if [self.image_name, next_subimage, i] not in self.segment_list:
+            #                     segments_to_add.append([self.image_name, next_subimage, i])
+            #                     light += 1
+            #                     continue
+            #             # Add middle intensity segments
+            #             if intensity >= 20 and intensity < 180 and middle<2:
+            #                 if [self.image_name, next_subimage, i] not in self.segment_list:
+            #                     segments_to_add.append([self.image_name, next_subimage, i])
+            #                     middle += 1
+            #                     continue
+            #             # Add large segments
+            #             if sp_size > 200 and large<2:
+            #                 if [self.image_name, next_subimage, i] not in self.segment_list:
+            #                     segments_to_add.append([self.image_name, next_subimage, i])
+            #                     large += 1
+            #
+            #     # Use this if statment for large (WV) images that are primarily
+            #     #   a single surface type. Don't use for smaller aerial images
+            #     # If we didn't get enough points from each category and we've
+            #     # tried less than 5 subimage so far, try another one.
+            #     #if len(segments_to_add)<7 and j<5:
+            #     #    j+=1
+            #     #    continue    # We didn't find enough, so restart
+            #
+            #     # Fill out the list with random ones if we got enough, or we've tried many subimages.
+            #     #   Use j index to prevent this loop from spending too long looking for points.
+            #     while (len(segments_to_add)<10 and j<200) and len(segments_to_add)<np.amax(ws_subimage):
+            #         i = np.random.randint(np.amax(ws_subimage)+1)
+            #         sp_size = np.sum(ws_subimage==i)
+            #         if sp_size == 0:
+            #             j+=1
+            #             continue
+            #         intensity = np.mean(self.original_image[next_subimage][i==ws_subimage])
+            #         # Make sure they're good segments
+            #         if sp_size > 10 and intensity >= 1:
+            #             # Prevent adding a duplicate segment
+            #             if [self.image_name, next_subimage, i] not in self.segment_list:
+            #                 segments_to_add.append([self.image_name, next_subimage, i])
+            #             else:
+            #                 j+=1
+            #         else:
+            #             j+=1
+            #
+            # # Keep only the unique segments
+            # # print segments_to_add
+            # self.segment_list += segments_to_add
 
         # In mode 2 we are doing simple random sampling
         if self.mode == 2:
@@ -472,12 +503,10 @@ Shadow: Surfaces that are covered by a dark shadow.
                     self.segment_list.append([self.subimage_index,x,y])
                     found = True
 
-    # #def save_subimage():
 
-    
     #Assigning the highlighted superpixel a classification
     def classify(self, keyPress):
-        segment_id = int(segment_list[len(label_vector):][0][2])
+        segment_id = int(self.segment_list[len(self.label_vector):][0][2])
         # Note that we classified one more image
         if keyPress == "snow":
             self.label_vector.append(1)
@@ -492,25 +521,26 @@ Shadow: Surfaces that are covered by a dark shadow.
         elif keyPress == "unknown":
             self.label_vector.append(0)
         
-        if mode == 1:
-            #Creating a feature list for the classified superpixel
-            # In development:
+        if self.mode == 1:
+            # Create the a attribute list for the labeled segment
             if self.im_type == 'pan':
-                entropy_image = entropy(bytescale(self.original_image[self.subimage_index]), disk(4))
-                feature_array = feature_calculations.analyze_pan_image(self.original_image[self.subimage_index], 
-                    self.secondary_image[self.subimage_index], entropy_image, self.im_date, segment_id=segment_id)
+                feature_array = attr_calc.analyze_pan_image(self.original_image[self.subimage_index],
+                                                            self.secondary_image[self.subimage_index],
+                                                            self.im_date,
+                                                            segment_id=segment_id)
             if self.im_type == 'srgb':
-                entropy_image = entropy(bytescale(self.original_image[self.subimage_index][:,:,0]), disk(4))
-                feature_array = feature_calculations.analyze_srgb_image(self.original_image[self.subimage_index], 
-                    self.secondary_image[self.subimage_index], entropy_image, segment_id=segment_id)
+                feature_array = attr_calc.analyze_srgb_image(self.original_image[self.subimage_index],
+                                                             self.secondary_image[self.subimage_index],
+                                                             segment_id=segment_id)
             if self.im_type == 'wv02_ms':
-                feature_array = feature_calculations.analyze_ms_image(self.original_image[self.subimage_index], 
-                    self.secondary_image[self.subimage_index], segment_id=segment_id)
+                feature_array = attr_calc.analyze_ms_image(self.original_image[self.subimage_index],
+                                                           self.secondary_image[self.subimage_index],
+                                                           segment_id=segment_id)
 
-            # feature_calculations returns a 2d array, but we only want the 1d list of features.
+            # attribute_calculations returns a 2d array, but we only want the 1d list of features.
             feature_array = feature_array[0]
-            # feature_array = analyze_superpixels(self.original_image[self.subimage_index], self.secondary_image[self.subimage_index], segment_id, self.im_type)
-        if mode == 2:
+
+        if self.mode == 2:
             feature_array = self.secondary_image[self.subimage_index][self.sp_buffer]
             print feature_array, self.label_vector[-1]
 
@@ -535,7 +565,7 @@ Shadow: Surfaces that are covered by a dark shadow.
     #Save progress      
     def save(self):
 
-        print "Saving..."
+        print("Saving...")
 
         infile = h5py.File(self.savepath, 'r')
         prev_names = []
@@ -573,22 +603,6 @@ Shadow: Surfaces that are covered by a dark shadow.
         self.parent.quit()
         quit()
 
-def create_composite(band_list):
-
-    img_dim = band_list[0].shape
-    img = np.zeros((img_dim[0], img_dim[1], len(band_list)), dtype=int)
-    for i in range(len(band_list)):
-        img[:,:,i] = band_list[i]
-    
-    return img
-
-
-# Code from http://chriskiehl.com/article/parallelism-in-one-line/
-# Returns a list of .h5 files in the given folder.
-def get_image_paths(folder):
-    return (os.path.join(folder, f)
-        for f in os.listdir(folder)
-        if '.h5' in f)
 
 # Returns all of the unique images in segment_list
 def get_required_images(segment_list):
@@ -652,7 +666,7 @@ def load_data(input_file, mode):
 
 # Allows the user to create a new training set or classification associated with their username
 # or to continue building on an existing list. 
-def welcome_gui(input_file, segment_type):
+def welcome_gui(input_file, segment_list):
     master = tk.Tk()
     master_font = tkFont.Font(family="Times New Roman", size=16)
     master['bg'] = 'white'
@@ -690,7 +704,176 @@ def welcome_gui(input_file, segment_type):
     tk.mainloop()
 
 
-if __name__ == "__main__":
+def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_type, tds_filename):
+    ## Build a list of the images in the input directory
+    # for each image in the directory, image list contains the "..._segmented.h5" file if it exists,
+    #   and the raw image file if it does not.
+
+    # If there is an existing segment list, note the required image to continue the
+    # training set
+    if segment_list:
+        required_images = get_required_images(segment_list[len(label_vector):])
+    else:
+        required_images = []
+
+    # Add the images in the provided folder to the image list
+    seg_list = list(utils.get_image_paths(input_directory, keyword='segmented.h5', strict=False))
+
+    for ext in utils.valid_extensions:
+        raw_list = utils.get_image_paths(input_directory, keyword=ext)
+        for raw_im in raw_list:
+            if os.path.splitext(raw_im)[0] + "_segmented.h5" not in seg_list:
+                seg_list.append(raw_im)
+
+    # Save only the unique entries
+    image_list = list(set(seg_list))
+    utils.remove_hidden(image_list)
+
+    # Make sure we have all of the required images
+    for image in required_images:
+        if image in image_list:
+            print "Missing required image: {}".format(image)
+            quit()
+
+    # **************************************** #
+    # For expanding icebridge training set 9.18.18
+    target_images = ["2016_07_19_01052.JPG",
+                     "2017_07_25_01613.JPG",
+                     "2017_07_25_01772.JPG",
+                     "2017_07_25_01783.JPG",
+                     "2017_07_25_06767.JPG"]
+    # **************************************** #
+
+    # As long as there were files in the input directory, loop indefinitely
+    # This loop breaks when the training GUI is closed.
+    while image_list:
+
+        # Cycle through each image in the list
+        for next_image in image_list:
+
+            # If we are out of predetermined segments to classify, start picking
+            # images from those in the directory provided
+            if len(segment_list) == len(label_vector):
+                image_name = os.path.split(next_image)[1]
+                if image_name not in target_images:
+                    print("Skipping {}".format(image_name))
+                    continue
+            # Otherwise find the image name from the next unlabeled segment
+            else:
+                image_name = segment_list[len(label_vector)][0]
+                # Convert the image name into the segmented name. This file must
+                #   exist to work from an existing tds. That is, we cant resegment the
+                #   image, because it will give different results and segment ids will not match.
+                image_name = os.path.splitext(image_name)[0] + "_segmented.h5"
+
+            # image_root, image_ext = os.path.splitext(image_name)
+            print("Working on image: {}".format(image_name))
+
+            # If the image is already segmented
+            if image_name.split('_')[-1] == 'segmented.h5':
+                segmented_name = image_name
+            # Otherwise image_name should point to a raw image
+            else:
+                print("Creating segments on provided image...")
+                # Preprocess next_image data
+                image_data, meta_data = prepare_image(input_directory, image_name, im_type,
+                                                      output_path=input_directory, verbose=True)
+                # Create image segments
+                segmented_name = os.path.splitext(image_name)[0] + '_segmented.h5'
+                seg_path = os.path.join(input_directory, segmented_name)
+                segment_image(image_data, image_type=im_type, write_results=True,
+                              dst_file=seg_path, verbose=True)
+                # Convert this entry in image_list to the "..._segmented.h5" name
+                image_list.append(segmented_name)
+                image_list.remove(next_image)
+
+            h5_file = os.path.join(input_directory, segmented_name)
+            # from segment import load_from_disk
+            original_image = []
+            original_image_dict, im_type = load_from_disk(h5_file, False)
+            for sub_image in range(len(original_image_dict[1])):
+                # Create a list of image blocks based on the number of bands
+                # in the input image.
+                # Need to verify this for pan images (ncw 9.17.18):
+                if im_type == 'pan':
+                    original_image.append(original_image_dict[1])
+                if im_type == 'wv02_ms':
+                    original_image.append(
+                        utils.create_composite([original_image_dict[i][sub_image] for i in range(1,9)],
+                                               dtype=c_int)
+                    )
+                if im_type == 'srgb':
+                    original_image.append(
+                        utils.create_composite([original_image_dict[i][sub_image] for i in range(1,4)],
+                                               dtype=c_int)
+                    )
+
+            with h5py.File(h5_file, 'r') as f:
+                im_date = f.attrs.get("Image Date")
+                watershed_image = f['watershed'][:]
+
+            # Convert the segmented image to c_int datatype. This is needed for the
+            # Cython methods that calculate attribute of segments.
+            watershed_image = np.ndarray.astype(watershed_image, c_int)
+
+            #### Initializing the GUI
+            tW = TrainingWindow(original_image, watershed_image, segment_list,
+                                image_name, label_vector, feature_matrix, im_type, im_date,
+                                1, tds_filename)
+
+
+def mode_two():
+    # image_list = utils.get_image_paths(input_file,keyword='_classified.h5')
+
+    # for image_file in image_list:
+    # print "Assessing accuracy of: %s" %image_file
+
+    # Single image of which we are assessing the accuracy
+    image_file = h5py.File(input_file, 'r')
+
+    original_image = image_file['original'][:]
+    classified_image = image_file['classified'][:]
+    im_date = image_file.attrs.get('Image Date')
+
+    image_file.close()
+
+    BLOCK_SIZE = 500
+
+    num_x_subimages = int(original_image.shape[1] / BLOCK_SIZE)  # integer truncation intentional
+    num_y_subimages = int(original_image.shape[0] / BLOCK_SIZE)
+
+    # This will be a list of all the objects created by the subimage class
+    original_subimage_list = []
+    classified_subimage_list = []
+
+    # These don't include pixels left over after integer truncation, so I changed
+    # the splitter function to save all splits in amounts divisible by 500 to get around this for now.
+    for i in range(num_y_subimages):
+        for j in range(num_x_subimages):
+            original_subimage_list.append(
+                original_image[i * BLOCK_SIZE:(i + 1) * BLOCK_SIZE, j * BLOCK_SIZE:(j + 1) * BLOCK_SIZE])
+            classified_subimage_list.append(
+                classified_image[i * BLOCK_SIZE:(i + 1) * BLOCK_SIZE, j * BLOCK_SIZE:(j + 1) * BLOCK_SIZE])
+
+    original_image = original_subimage_list
+    classified_image = classified_subimage_list
+
+    image = None
+    savepath = os.path.join(input_file[:-14] + '_accuracy_data.h5')
+
+    #### Initializing the GUI
+    tW = TrainingWindow(original_image, classified_image, segment_list,
+                        image, label_vector, feature_matrix, im_type,
+                        im_date, mode, savepath)
+
+    # check_continue = None
+    # while check_continue != 'y' or check_continue != 'n':
+    #   check_continue = raw_input("Assess another image? (y/n): ")
+    #   check_continue = str(check_continue)
+    #   if check_continue.lower() == 'n':
+    #       quit()
+
+def main():
     
     #### Set Up Arguments
     parser = argparse.ArgumentParser()
@@ -742,18 +925,19 @@ if __name__ == "__main__":
         input_file = args.input
 
         if not os.path.isfile(input_file):
-            print "Could not locate file: %s" %input_file
+            print("Could not locate file: %s" %input_file)
             quit()
 
     # input_path is the path of either the training dataset or the accuracy
-    input_path = os.path.dirname(input_file)
+    # input_path = os.path.dirname(input_directory)
+    tds_filename = os.path.join(input_directory, tds_file)
 
-    
     #### Load Necessary Files
-    # Loads the files to use for manual classificaiton. Mode 1 requires the
-    # training_validation.h5 file, which contains the list of segments to be
-    # classified, and any work already done. Mode 2 requires the accuracy 
-    # data file which has any previous work done for that image. 
+    # Loads the files to use for manual classification.
+    # Mode 1 requires:
+    #   tds.h5 file, which contains the list of segments to be classified, and any work already done.
+    # Mode 2 requires:
+    #  the accuracy data file, which only has previous work done for that image.
 
     # NOTE: In mode 2, segment_list is the ID of manually classified pixels,
     # and feature_matrix is a simple list (not matrix) of the predicted classifications
@@ -776,168 +960,20 @@ if __name__ == "__main__":
             label_vector = [] # [y1...yn] column vector where n : number of classified segments, y = classification
     except NameError:
         data_file.close()
-        print "Name Error"
+        print("Name Error")
         quit()
 
     data_file.close()
 
-
     #### Load the images and segments.
-
     if mode == 1:
-        # Build the list of required images. Finds unique images in the subset of segment list that does not
-        # have an associated classification yet. These images are based on the precreated segment list
-        # image_list = get_required_images(segment_list[len(label_vector):])
 
-        ## Build a list of the images in the input directory
-
-        # If theres an existing segment list, note the required image to continue the
-        # training set
-        if segment_list:
-            required_images = get_required_images(segment_list[len(label_vector):])
-        else:
-            required_images = []
-        # Add the images in the provided folder to the image list
-        image_list = []
-        seg_list = list(utils.get_image_paths(input_directory,keyword='segmented.h5'))
-        print seg_list
-        for ext in utils.valid_extensions:
-            raw_list = utils.get_image_paths(input_directory,keyword=ext)
-            for raw_im in raw_list:
-                if os.path.splitext(raw_im)[0]+"_segmented.h5" not in seg_list:
-                    seg_list.append(raw_im)
-
-        image_list = list(set(seg_list))
-
-        print image_list
-
-        # Make sure we have all of the required images
-        for image in required_images:
-            if image in image_list:
-                print "Missing required image: {}".format(image)
-                quit()
-
-        # As long as there were files in the input directory, loop indefinitely
-        while image_list:
-
-            # Cycle through each image in the list
-            for next_image in image_list:
-
-                # If we are out of predetermined segments to classify, start picking
-                # images from those in the directory provided
-                if len(segment_list) == len(label_vector):
-                    image_name = os.path.split(next_image)[1]
-                else:
-                    image_name = segment_list[len(label_vector)][0]
-
-                image_root, image_ext = os.path.splitext(image_name)
-                print image_name
-                
-                # If the image is already segmented
-                if image_name.split('_')[-1] == 'segmented.h5':
-                    segmented_name = image_name
-                else:
-                    # preprocess next_image data
-                    image_data, meta_data = prepare_image(input_path, image_name, im_type,
-                                    output_path=input_path, verbose=True)
-                    # segment image_data
-                    print "Segmenting provided image..."
-                    segmented_name = os.path.splitext(image_name)[0] + '_segmented.h5'
-                    seg_path = os.path.join(input_path,segmented_name)
-                    segment_image(image_data, image_type=im_type, write_results=True,
-                                    dst_file=seg_path, verbose=True)
-                    image_list.append(segmented_name)
-                    image_list.remove(next_image)
-
-                h5_file = os.path.join(input_path, segmented_name)
-                # from segment import load_from_disk
-                original_image = []
-                original_image_dict, im_type = load_from_disk(h5_file,False)
-                for sub_image in range(len(original_image_dict[1])):
-                    # Create a list of image blocks based on the number of bands
-                    # in the input image.
-                    if im_type == 'wv02_ms':
-                        original_image.append(
-                            utils.create_composite([original_image_dict[1][sub_image],
-                                                    original_image_dict[2][sub_image],
-                                                    original_image_dict[3][sub_image],
-                                                    original_image_dict[4][sub_image],
-                                                    original_image_dict[5][sub_image],
-                                                    original_image_dict[6][sub_image],
-                                                    original_image_dict[7][sub_image],
-                                                    original_image_dict[8][sub_image]])
-                                             )
-                    if im_type == 'srgb':
-                        original_image.append(
-                            utils.create_composite([original_image_dict[1][sub_image],
-                                                    original_image_dict[2][sub_image],
-                                                    original_image_dict[3][sub_image]])
-                                             )
-                # original_image = utils.create_composite([original_image[1],
-                #                                         original_image[2],
-                #                                         original_image[3]])
-
-                with h5py.File(h5_file,'r') as f:
-                    im_date = f.attrs.get("Image Date")
-                    watershed_image = f['watershed'][:]
-
-                print image_name
-                # print np.shape(original_image)
-                # quit()
-                #### Initializing the GUI
-                tW = TrainingWindow(original_image, watershed_image, segment_list, 
-                    image_name, label_vector, feature_matrix, im_type, im_date, 
-                    mode, input_file)
+        mode_one(segment_list, label_vector, feature_matrix, input_directory, im_type, tds_filename)
 
     if mode == 2:
 
-        # image_list = utils.get_image_paths(input_file,keyword='_classified.h5')
-
-        # for image_file in image_list:
-        # print "Assessing accuracy of: %s" %image_file
-
-        # Single image of which we are assessing the accuracy
-        image_file = h5py.File(input_file, 'r')
-
-        original_image = image_file['original'][:]
-        classified_image = image_file['classified'][:]
-        im_date = image_file.attrs.get('Image Date')
-
-        image_file.close()
-
-        BLOCK_SIZE = 500
-
-        num_x_subimages = int(original_image.shape[1] / BLOCK_SIZE) #integer truncation intentional
-        num_y_subimages = int(original_image.shape[0] / BLOCK_SIZE)
-        
-        #This will be a list of all the objects created by the subimage class
-        original_subimage_list = []
-        classified_subimage_list = []
-
-        # These don't include pixels left over after integer truncation, so I changed
-        # the splitter function to save all splits in amounts divisible by 500 to get around this for now. 
-        for i in range(num_y_subimages):
-            for j in range(num_x_subimages):
-                original_subimage_list.append(original_image[i*BLOCK_SIZE:(i+1)*BLOCK_SIZE, j*BLOCK_SIZE:(j+1)*BLOCK_SIZE])
-                classified_subimage_list.append(classified_image[i*BLOCK_SIZE:(i+1)*BLOCK_SIZE, j*BLOCK_SIZE:(j+1)*BLOCK_SIZE])
-            
-        original_image = original_subimage_list
-        classified_image = classified_subimage_list
-
-        image = None
-        savepath = os.path.join(input_file[:-14] + '_accuracy_data.h5')
-
-        #### Initializing the GUI
-        tW = TrainingWindow(original_image, classified_image, segment_list, 
-                            image, label_vector, feature_matrix, im_type, 
-                            im_date, mode, savepath)
-
-        # check_continue = None
-        # while check_continue != 'y' or check_continue != 'n':
-        #   check_continue = raw_input("Assess another image? (y/n): ")
-        #   check_continue = str(check_continue)
-        #   if check_continue.lower() == 'n':
-        #       quit()
+        mode_two()
 
 
-
+if __name__ == "__main__":
+    main()
