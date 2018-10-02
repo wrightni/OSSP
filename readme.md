@@ -18,7 +18,7 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 * numpy
 * scipy
 * h5py
-* skimage
+* scikit-image
 * sklearn
 * matplotlib
 * Tkinter
