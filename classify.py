@@ -4,18 +4,14 @@
 import argparse
 from multiprocessing import Process, Queue
 from ctypes import *
-
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 import matplotlib.pyplot as plt
-from skimage.filters.rank import entropy
-import skimage.morphology as morph
 
 from lib import utils, debug_tools
 from lib import attribute_calculations as attr_calc
 from lib import create_clsf_raster as ccr
-from lib import feature_calculations    # soon to be removed
 
 # tqdm for progress bar
 
@@ -55,7 +51,7 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     training_feature_matrix = training_dataset[1]
 
     # Method for assessing the quality of the training dataset.
-    quality_control = True
+    # quality_control = True
     if quality_control == True:
         debug_tools.test_training(label_vector, training_feature_matrix)
         aa = raw_input("Continue? ")
@@ -255,8 +251,11 @@ def main():
     ## Load the training data
     tds = utils.load_tds(tds_file,tds_list)
 
+    input_image, watershed_data = read_inputfile()
     
     #### Classify the image with inputs
+    # clsf_im = (input_image, watershed_data, training_dataset, meta_data,
+    #                    threads=1, quality_control=False, verbose=False):
     clsf_im = classify_image(input_filename, tds, threads=threads,
                                                   quality_control=quality_control, 
                                                   debug_flag=debug_flag, 

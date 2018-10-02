@@ -38,6 +38,9 @@ def main():
                                     1) classified image (png)
                                     2) classified results (csv)
                         ''')
+    parser.add_argument("-c", "--nostretch", action="store_false",
+                        help="Do not apply a histogram stretch image correction to input.")
+
 
     # Parse Arguments
     args = parser.parse_args()
@@ -72,6 +75,7 @@ def main():
     num_threads = args.parallel
     verbose = args.verbose
     extended_output = args.extended_output
+    stretch = args.nostretch
 
     # Directory where temporary files are saved
     if num_splits > 1:
@@ -109,6 +113,7 @@ def main():
             image_data, meta_data = prepare_image(src_dir, image_name, image_type,
                                                   output_path=working_dir,
                                                   number_of_splits=num_splits,
+                                                  apply_correction=stretch,
                                                   verbose=verbose)
             block_dims = meta_data[0]
             image_date = meta_data[1]

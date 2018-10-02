@@ -8,7 +8,7 @@ import numpy as np
 import os
 import h5py
 from multiprocessing import Process, Queue
-from skimage import filters, morphology, feature, exposure
+from skimage import filters, morphology, feature, exposure, img_as_ubyte
 from scipy import ndimage
 from lib import utils
 from lib import debug_tools
@@ -58,8 +58,8 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         amplification_factor = 2.
         band_list = [1,1,1]
     elif image_type == 'wv02_ms':
-        sobel_threshold = 0.1
-        amplification_factor = 3.
+        sobel_threshold = 0.02
+        amplification_factor = 2.5
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.03
@@ -135,9 +135,11 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     while test_check:
         # test_check = check_results(im_block_dict,segmnt_block_list)
         watershed = segmnt_block_list[0]
-        original_1 = im_block_dict[1][0]
-        original_2 = im_block_dict[2][0]
-        original_3 = im_block_dict[3][0]
+        original_1 = im_block_dict[5][0]
+        original_2 = im_block_dict[3][0]
+        original_3 = im_block_dict[2][0]
+
+        print np.amax(watershed)
 
         ws_bound = segmentation.find_boundaries(watershed)
         ws_display = utils.create_composite([original_1, original_2, original_3])
@@ -145,7 +147,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         ws_display[:, :, 1][ws_bound] = 80
         ws_display[:, :, 2][ws_bound] = 80
 
-        save_name = 'E:\NASA-Ames\debugging\segcheck\segs_{}.png'
+        save_name = '/Volumes/ncwright/NASA/studysites/atmos_corr_window/classified/s1_{}.png'
         mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
         test_check = False
 
@@ -207,17 +209,17 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
 
-    smooth_im_blue = filters.gaussian(image_data[2],sigma=2)
-    smooth_im_red = filters.gaussian(image_data[0],sigma=2)
+    smooth_im_blue = filters.gaussian(image_data[2],sigma=2,preserve_range=True)
+    smooth_im_red = filters.gaussian(image_data[0],sigma=2,preserve_range=True)
 
     # Create a gradient image using a sobel filter
     sobel_image_blue = filters.scharr(smooth_im_blue)#image_data[2])
     sobel_image_red = filters.scharr(smooth_im_red)
 
     sobel_image = sobel_image_blue + np.abs(sobel_image_blue-sobel_image_red)
-    # Adjust the sobel image based on the given threshold and amp factor.
-    upper_threshold = 255./amplification_factor
 
+    # Adjust the sobel image based on the given threshold and amp factor.
+    upper_threshold = 255. / amplification_factor
     if upper_threshold < 50:
         upper_threshold = 50
     sobel_image = exposure.rescale_intensity(sobel_image,
@@ -235,8 +237,6 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     sobel_threshold *= 255
     sobel_image[sobel_image<=sobel_threshold]=0
 
-    #sobel_copy = np.copy(sobel_image)
-
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
     inv_sobel = 255-sobel_image
@@ -248,9 +248,6 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     im_watersheds = morphology.watershed(sobel_image,markers)
     im_watersheds = np.array(im_watersheds,dtype='uint32')
     # Clear gradient image data
-
-    # save_name = '/Volumes/research/NASA-Ames/debugging/segcheck/gradient.png'
-    # mimg.imsave(save_name, sobel_image, format='png')
 
     sobel_image = None
 
@@ -264,28 +261,6 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     #   orthorectification) to one value, at the end of the watershed list.
     im_watersheds[empty_pixels] = np.amax(im_watersheds)+1
 
-    # *********************************
-    # Removed 8/17/18: Segment recombination was not necessary for icebridge srgb images.
-    #   It added a lot of computation time and very little benefit. Need to test this
-    #   on other imagery types before permanently removing this block of code.
-    # *********************************
-    # # Recombine segments that are adjacent and similar to each other.
-    # #   Created a region adjacency graph. Create_composite() takes a single list
-    # #   of bands
-    # color_im = utils.create_composite([image_data[2], image_data[1], image_data[0]])
-    # # Clear image data
-    # image_data = None
-    # # Create the region adjacency graph based on the color image
-    # try:
-    #     im_graph = graph.rag_mean_color(color_im,im_watersheds)
-    # except KeyError:
-    #     pass
-    # else:
-    #     # Clear color image data
-    #     # color_im = None
-    #     # Combine segments that are adjacent and whose pixel intensity
-    #     #   difference is less than 10.
-    #     im_watersheds = graph.cut_threshold(im_watersheds,im_graph,10.0)
     return im_watersheds
 
         

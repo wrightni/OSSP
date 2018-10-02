@@ -19,7 +19,7 @@ from lib import utils
 
 
 def prepare_image(input_path, image_name, image_type,
-                  output_path=None, number_of_splits=1, apply_correction=True, verbose=False):
+                  output_path=None, number_of_splits=1, apply_correction=False, verbose=False):
     """
     Reads an image file and prepares it for further processing.
         1. Rescales image intensity based on the input histogram.
@@ -172,6 +172,7 @@ def prepare_image(input_path, image_name, image_type,
         else:
             if image_type == 'wv02_ms' or image_type == 'pan':
                 band = rescale_band(band, 1, 2047)
+                # band = rescale_band(band, 0, .9)
 
         # If the image is not being split, construct image blocks and
         #   compile that data to return
@@ -331,7 +332,7 @@ def find_peaks(hist, bin_centers, image_type):
     if image_type == 'srgb':
         min_count = 1000
     else:
-        min_count = 10000
+        min_count = 1000
     # First find all potential peaks in the histogram
     peaks = []
     for i in range(1, len(bin_centers) - 1):

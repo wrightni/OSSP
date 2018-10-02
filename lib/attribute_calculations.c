@@ -4283,16 +4283,16 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_2analyze_ms_image(CYTHON
     /* "lib/attribute_calculations.pyx":139
  * 
  *         # Average Pixel Intensity of each band
- *         for b in range(7):             # <<<<<<<<<<<<<<
+ *         for b in range(8):             # <<<<<<<<<<<<<<
  *             features[b] = np.average(internal[b][ws])
  *             if features[b] < 1:
  */
-    for (__pyx_t_6 = 0; __pyx_t_6 < 7; __pyx_t_6+=1) {
+    for (__pyx_t_6 = 0; __pyx_t_6 < 8; __pyx_t_6+=1) {
       __pyx_v_b = __pyx_t_6;
 
       /* "lib/attribute_calculations.pyx":140
  *         # Average Pixel Intensity of each band
- *         for b in range(7):
+ *         for b in range(8):
  *             features[b] = np.average(internal[b][ws])             # <<<<<<<<<<<<<<
  *             if features[b] < 1:
  *                 features[b] = 1
@@ -4358,7 +4358,7 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_2analyze_ms_image(CYTHON
       (__pyx_v_features[__pyx_v_b]) = __pyx_t_15;
 
       /* "lib/attribute_calculations.pyx":141
- *         for b in range(7):
+ *         for b in range(8):
  *             features[b] = np.average(internal[b][ws])
  *             if features[b] < 1:             # <<<<<<<<<<<<<<
  *                 features[b] = 1
@@ -4377,7 +4377,7 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_2analyze_ms_image(CYTHON
         (__pyx_v_features[__pyx_v_b]) = 1.0;
 
         /* "lib/attribute_calculations.pyx":141
- *         for b in range(7):
+ *         for b in range(8):
  *             features[b] = np.average(internal[b][ws])
  *             if features[b] < 1:             # <<<<<<<<<<<<<<
  *                 features[b] = 1

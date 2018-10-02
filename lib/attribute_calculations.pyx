@@ -122,7 +122,7 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
 
     x_dim, y_dim, num_bands = np.shape(input_image)
 
-   #### Need to convert images to dtype c_int
+   #### Need to convert images to dtype c_int (done elsewhere)
     # input_image = np.ndarray.astype(input_image, c_int)
     # watershed_image = np.ndarray.astype(watershed_image, c_int)
     if segment_id is not False:
@@ -136,7 +136,7 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
     for ws in range(num_ws):
 
         # Average Pixel Intensity of each band
-        for b in range(7):
+        for b in range(8):
             features[b] = np.average(internal[b][ws])
             if features[b] < 1:
                 features[b] = 1
