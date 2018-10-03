@@ -52,11 +52,11 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
 
     # Method for assessing the quality of the training dataset.
     # quality_control = True
-    if quality_control == True:
-        debug_tools.test_training(label_vector, training_feature_matrix)
-        aa = raw_input("Continue? ")
-        if aa == 'n':
-            quit()
+    # if quality_control == True:
+    #     debug_tools.test_training(label_vector, training_feature_matrix)
+    #     aa = raw_input("Continue? ")
+    #     if aa == 'n':
+    #         quit()
 
     #### Construct the random forest decision tree using the training data set
     rfc = RandomForestClassifier(n_estimators=100)
@@ -251,15 +251,15 @@ def main():
     ## Load the training data
     tds = utils.load_tds(tds_file,tds_list)
 
-    input_image, watershed_data = read_inputfile()
+    # input_image, watershed_data = read_inputfile()
     
     #### Classify the image with inputs
     # clsf_im = (input_image, watershed_data, training_dataset, meta_data,
     #                    threads=1, quality_control=False, verbose=False):
-    clsf_im = classify_image(input_filename, tds, threads=threads,
-                                                  quality_control=quality_control, 
-                                                  debug_flag=debug_flag, 
-                                                  verbose=verbose_flag)
+    # clsf_im = classify_image(input_filename, tds, threads=threads,
+    #                                               quality_control=quality_control,
+    #                                               debug_flag=debug,
+    #                                               verbose=verbose_flag)
 
     # utils.save_results("classification_results", os.path.dirname(input_filename), output_filename, pixel_counts)
 

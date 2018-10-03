@@ -390,11 +390,11 @@ def find_peaks(hist, bin_centers, image_type):
     return peaks
 
 
-def find_threshold(hist, bin_centers, peaks, image_type, top=0.1, bottom=0.5):
+def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     """
     Finds the upper and lower threshold for histogram stretching.
     Using the indices of the highest and lowest peak (by intensity, not # of pixels), this searches for an upper
-    threshold that is both greater than the highest peak and has fewer than 10% the number of pixels, and a lower
+    threshold that is both greater than the highest peak and has fewer than 15% the number of pixels, and a lower
     threshold that is both less than the lowest peak and has fewer than 50% the number of pixels.
     10% and 50% picked empirically to give good results.
     """

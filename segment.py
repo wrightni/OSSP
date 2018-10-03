@@ -63,7 +63,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.03
-        amplification_factor = 3.2
+        amplification_factor = 3.1
         band_list = [3,2,1]
 
     #### Segment each image block
@@ -135,9 +135,9 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     while test_check:
         # test_check = check_results(im_block_dict,segmnt_block_list)
         watershed = segmnt_block_list[0]
-        original_1 = im_block_dict[5][0]
-        original_2 = im_block_dict[3][0]
-        original_3 = im_block_dict[2][0]
+        original_1 = im_block_dict[1][0]
+        original_2 = im_block_dict[2][0]
+        original_3 = im_block_dict[3][0]
 
         print np.amax(watershed)
 
@@ -147,7 +147,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         ws_display[:, :, 1][ws_bound] = 80
         ws_display[:, :, 2][ws_bound] = 80
 
-        save_name = '/Volumes/ncwright/NASA/studysites/atmos_corr_window/classified/s1_{}.png'
+        save_name = '/Users/nicholas/Desktop/OSSP/IceBridge/classified/s1_{}.png'
         mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
         test_check = False
 
