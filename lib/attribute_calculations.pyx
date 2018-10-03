@@ -275,7 +275,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
                 internal[b][0].append(intensity_image_view[x,y][b])
 
             # Determine the external values within the window
-            for w in range(6):
+            for w in range(4):
                 i = window[w]
                 # Determine the external values in the x-axis
                 # Check for edge conditions
@@ -335,7 +335,7 @@ def pixel_sort(int[:,:,:] intensity_image_view,
                 internal[b][sn].append(intensity_image_view[x,y][b])
 
             # Determine the external values within the window
-            for w in range(6):
+            for w in range(4):
                 i = window[w]
                 # Determine the external values in the x-axis
                 # Check for edge conditions

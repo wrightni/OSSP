@@ -3818,7 +3818,7 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_2analyze_ms_image(CYTHON
  * 
  *     x_dim, y_dim, num_bands = np.shape(input_image)             # <<<<<<<<<<<<<<
  * 
- *    #### Need to convert images to dtype c_int
+ *    #### Need to convert images to dtype c_int (done elsewhere)
  */
   __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 123, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
@@ -6681,16 +6681,16 @@ __pyx_t_15 = __pyx_v_b;
       /* "lib/attribute_calculations.pyx":278
  * 
  *             # Determine the external values within the window
- *             for w in range(6):             # <<<<<<<<<<<<<<
+ *             for w in range(4):             # <<<<<<<<<<<<<<
  *                 i = window[w]
  *                 # Determine the external values in the x-axis
  */
-      for (__pyx_t_11 = 0; __pyx_t_11 < 6; __pyx_t_11+=1) {
+      for (__pyx_t_11 = 0; __pyx_t_11 < 4; __pyx_t_11+=1) {
         __pyx_v_w = __pyx_t_11;
 
         /* "lib/attribute_calculations.pyx":279
  *             # Determine the external values within the window
- *             for w in range(6):
+ *             for w in range(4):
  *                 i = window[w]             # <<<<<<<<<<<<<<
  *                 # Determine the external values in the x-axis
  *                 # Check for edge conditions
@@ -7389,16 +7389,16 @@ __pyx_t_14 = __pyx_v_b;
       /* "lib/attribute_calculations.pyx":338
  * 
  *             # Determine the external values within the window
- *             for w in range(6):             # <<<<<<<<<<<<<<
+ *             for w in range(4):             # <<<<<<<<<<<<<<
  *                 i = window[w]
  *                 # Determine the external values in the x-axis
  */
-      for (__pyx_t_11 = 0; __pyx_t_11 < 6; __pyx_t_11+=1) {
+      for (__pyx_t_11 = 0; __pyx_t_11 < 4; __pyx_t_11+=1) {
         __pyx_v_w = __pyx_t_11;
 
         /* "lib/attribute_calculations.pyx":339
  *             # Determine the external values within the window
- *             for w in range(6):
+ *             for w in range(4):
  *                 i = window[w]             # <<<<<<<<<<<<<<
  *                 # Determine the external values in the x-axis
  *                 # Check for edge conditions
