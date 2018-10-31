@@ -43,6 +43,12 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
 
     for ws in range(num_ws):
 
+        # Check for empty watershed labels
+        if internal[0][ws] == []:
+            features = [0 for _ in range(16)]
+            feature_matrix.append(features)
+            continue
+
         # Average Pixel Intensity of each band
         for b in range(3):
             features[b] = np.average(internal[b][ws])
@@ -134,7 +140,11 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
                                         num_ws, num_bands)
 
     for ws in range(num_ws):
-
+        # Check for empty watershed labels
+        if internal[0][ws] == []:
+            features = [0 for _ in range(18)]
+            feature_matrix.append(features)
+            continue
         # Average Pixel Intensity of each band
         for b in range(8):
             features[b] = np.average(internal[b][ws])
@@ -200,10 +210,14 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
         internal, external = pixel_sort(input_image, watershed_image,
                                         x_dim, y_dim,
                                         num_ws, num_bands)
-    print np.shape(external)
-    print np.shape(external[0])
-    print external[0][10]
+
     for ws in range(num_ws):
+        
+        # Check for empty watershed labels
+        if internal[0][ws] == []:
+            features = [0 for _ in range(12)]
+            feature_matrix.append(features)
+            continue
 
         # Average Pixel Intensity
         features[0] = np.average(internal[0][ws])

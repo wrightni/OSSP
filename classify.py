@@ -164,13 +164,11 @@ def process_block_helper(im_block_queue, clsf_block_queue, image_type,
 
 def classify_block(image_block, watershed_block, image_type, image_date, rfc):
 
-    clsf_block = []
-
     # Cast data as C int.
     image_block = np.ndarray.astype(image_block, c_int)
     watershed_block = np.ndarray.astype(watershed_block, c_int)
 
-    ## If the block contains no data, set the classification values to 0 
+    ## If the block contains no data, set the classification values to 0
     if np.amax(image_block) < 2:
         clsf_block = np.zeros(np.shape(image_block)[0:2])
         return clsf_block

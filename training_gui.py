@@ -280,7 +280,7 @@ Shadow: Surfaces that are covered by a dark shadow.
             # Add a new set of segments to the list, unless this process has already happened
             # more than x number of times (tracker)
             if len(self.label_vector) == len(self.segment_list):
-                if self.tracker >= 5:
+                if self.tracker >= 10:
                     self.exit_image()
                     return
                 self.add_segments()
@@ -755,9 +755,9 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
             # images from those in the directory provided
             if len(segment_list) == len(label_vector):
                 image_name = os.path.split(next_image)[1]
-                if image_name not in target_images:
-                    print("Skipping {}".format(image_name))
-                    continue
+                # if image_name not in target_images:
+                #     print("Skipping {}".format(image_name))
+                #     continue
             # Otherwise find the image name from the next unlabeled segment
             else:
                 image_name = segment_list[len(label_vector)][0]

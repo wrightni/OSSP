@@ -142,7 +142,7 @@ def prepare_image(input_path, image_name, image_type,
         band = None
 
         # Find the strongest (3) peaks in the band histogram
-        peaks = find_peaks(hist, bin_centers, image_type)
+        peaks = find_peaks(hist, bin_centers)
         # Find the high and low threshold for rescaling image intensity
         lower_b, upper_b = find_threshold(hist, bin_centers,
                                           peaks, image_type)
@@ -319,7 +319,7 @@ def read_metadata(metadata, image_type):
     return doy
 
 
-def find_peaks(hist, bin_centers, image_type):
+def find_peaks(hist, bin_centers):
     """
     Finds the three strongest peaks in a given band.
     Criteria for each peak:
@@ -328,11 +328,10 @@ def find_peaks(hist, bin_centers, image_type):
         Is greater than the directly adjacent bins, and the bins +/- 5 away
     """
 
-    # Roughly define the smallest acceptable size of a peak based on the input image type.
-    if image_type == 'srgb':
-        min_count = 1000
-    else:
-        min_count = 1000
+    # Roughly define the smallest acceptable size of a peak based on the number of pixels
+    # in the largest bin.
+    min_count = int(max(hist)*.02)
+
     # First find all potential peaks in the histogram
     peaks = []
     for i in range(1, len(bin_centers) - 1):
@@ -412,7 +411,10 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     # Convert the histogram bin index to an intensity value
     lower = bin_centers[thresh_bot]
     upper = bin_centers[thresh_top]
+    # return lower, upper
 
+    # Determine the width of the lower peak.
+    lower_width = min_peak - thresh_bot
     # Limit the amount of stretch to a percentage of the total dynamic range 
     #   in the case that all three main surface types are not represented (fewer
     #   than 3 peaks)
@@ -427,9 +429,14 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
         else:
             max_bit = 255
             upper_limit = 0.6
-        min_range = int(max_bit * .08)
-        if lower > min_range:
-            lower = min_range
+
+        # If the width of the lowest peak is less than 3% of the bit depth,
+        #   then the lower peak is likely open water. 3% determined visually, but
+        #   ocean has a much narrower peak than ponds or ice.
+        if float(lower_width)/max_bit >= 0.03:
+            min_range = int(max_bit * .08)
+            if lower > min_range:
+                lower = min_range
         # If there are at least 2 peaks we don't need an upper limit, as the upper
         #   limit is only to prevent open water only images from being stretched.
         if len(peaks) < 2:

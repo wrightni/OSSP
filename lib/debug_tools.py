@@ -96,12 +96,12 @@ def display_histogram(image_band):
     Displays a histogram of the given band's data. 
     Ignores zero values.
     '''
-    hist, bin_centers = exposure.histogram(image_band[image_band>0])
+    hist, bin_centers = exposure.histogram(image_band[image_band>0],nbins=1000)
 
     plt.figure(1)
     plt.bar(bin_centers, hist)
     # plt.xlim((0,np.max(image_band)))
-    # plt.ylim((0,np.max(hist[0:])))
+    # plt.ylim((0,100000))
     plt.xlabel("Pixel Intensity")
     plt.ylabel("Frequency")
     plt.show()

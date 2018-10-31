@@ -132,24 +132,24 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     # Method that provides the user an option to view the original image
     #  side by side with the segmented image.
     # test_check = True
-    while test_check:
-        # test_check = check_results(im_block_dict,segmnt_block_list)
-        watershed = segmnt_block_list[0]
-        original_1 = im_block_dict[1][0]
-        original_2 = im_block_dict[2][0]
-        original_3 = im_block_dict[3][0]
-
-        print np.amax(watershed)
-
-        ws_bound = segmentation.find_boundaries(watershed)
-        ws_display = utils.create_composite([original_1, original_2, original_3])
-        ws_display[:, :, 0][ws_bound] = 240
-        ws_display[:, :, 1][ws_bound] = 80
-        ws_display[:, :, 2][ws_bound] = 80
-
-        save_name = '/Users/nicholas/Desktop/OSSP/IceBridge/classified/s1_{}.png'
-        mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
-        test_check = False
+    # while test_check:
+    #     # test_check = check_results(im_block_dict,segmnt_block_list)
+    #     watershed = segmnt_block_list[0]
+    #     original_1 = im_block_dict[1][0]
+    #     original_2 = im_block_dict[2][0]
+    #     original_3 = im_block_dict[3][0]
+    #
+    #     print np.amax(watershed)
+    #
+    #     ws_bound = segmentation.find_boundaries(watershed)
+    #     ws_display = utils.create_composite([original_1, original_2, original_3])
+    #     ws_display[:, :, 0][ws_bound] = 240
+    #     ws_display[:, :, 1][ws_bound] = 80
+    #     ws_display[:, :, 2][ws_bound] = 80
+    #
+    #     save_name = '/Volumes/ncwright/NASA/Ames/Results/GR_20150928/originals/09282015_raw/classified/s1_{}.png'
+    #     mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+    #     test_check = False
 
     # Writes the segmented data to disk. Used for providing segments to the
     #  training gui and when the image is split into multiple parts. Return None

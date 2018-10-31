@@ -108,8 +108,8 @@ def main():
 
         # If the image has not yet been split or if no splitting was requested,
         # proceed to the preprocessing step.
+        image_name = task.get_id()
         if not task.is_split() or num_splits == 1:
-            image_name = task.get_id()
             image_data, meta_data = prepare_image(src_dir, image_name, image_type,
                                                   output_path=working_dir,
                                                   number_of_splits=num_splits,
