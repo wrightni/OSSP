@@ -22,6 +22,8 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 * sklearn
 * matplotlib
 * Tkinter
+
+#### Optional
 * tqdm (for progress bar)
 
 ## Usage
@@ -30,11 +32,11 @@ For detailed usage and installation instructions, see the pdf document 'Algorith
 
 ### setup.py
 
-The first step is to run the setup.py script to compile C libraries. Run __python setup.py build\_ext --build-lib .__ from the OSSP directory.
+The first step is to run the setup.py script to compile C libraries. Run __python setup.py build\_ext --build-lib .__ from the OSSP directory. Be sure to include the period after --build-lib. 
 
 ### ossp_process.py
 
-This combines all steps of the image classification scheme into one script. This script finds all appropriately formatted files in the input directory (.tif(f) and .jpg) and queues them for processing. For each image, this script processes them as follows: Image subdivision (if chosen) and preprocessing (preprocess) -> segmentation (segment.py) -> classification (classify.py) -> calculate statistics -> recompile image subdivisions (if present). ossp\_process.py is able to utilize more than one core of the processor by creating multiple threads. Use the --parallel option to select the number of threads to create.
+This combines all steps of the image classification scheme into one script and should be the primary script to use. If given a folder of images, this script finds all appropriately formatted files directory (.tif(f) and .jpg) and queues them for processing. If given an image file, this script processing that single image alone. For an image, this script processes them as follows: Image subdivision (if chosen) and preprocessing (preprocess) -> segmentation (segment.py) -> classification (classify.py) -> calculate statistics -> recompile image subdivisions (if present). ossp\_process.py is able to process several image subdivisions concurrently by creating multiple threads. Use the --parallel option to select the number of threads to create.
 
 #### Required Arguments
 * __input directory__: directory containing all of the images you wish to process Note that all .jpg and .tif images in the input directory as well as all sub-directories of it will be processed. Can also provide the path and filename to a single image to process only that image.
@@ -59,7 +61,7 @@ Example: ossp\_process.py input\_dir im\_type training\_dataset\_file -s 4 -p 2
 
 This example will process all .tif and .jpg files in the input directory, using the training data found in training\_dataset\_file using two processors, and splitting the image into four sections
 
-In general, images should be divided into parts small enough to easily load into RAM. This depends strongly on the computer running these scripts. Segments should typically not exceed 1 or 2gb in size for best results. For the 5-7mb RGB images provided as test subjects, subdivision is not required (use –s 1 as the optional argument). Processing speed can be increased by combining subdivision with multiple cores. For a full multispectral WorldView scene, which may be 16gb or larger, 9 or 16 segments are typically needed.
+In general, images should be divided into parts small enough to easily load into RAM. This depends strongly on the computer running these scripts. Segments should typically not exceed 1 or 2gb in size for best results. For ~10mb sRGB images subdivision is not required (use –s 1 as the optional argument). For a full multispectral WorldView scene, which may be 16gb or larger, 9 or 16 segments are typically needed.
 
 
 ### preprocess.py
