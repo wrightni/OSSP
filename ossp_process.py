@@ -77,6 +77,11 @@ def main():
     extended_output = args.extended_output
     stretch = args.nostretch
 
+    # For Ames OIB Processing:
+    assess_quality = True
+    # Set a default quality score until this value is calculated
+    quality_score = 1.
+
     # Directory where temporary files are saved
     if num_splits > 1:
         working_dir = os.path.join(src_dir, 'splits')
@@ -115,6 +120,13 @@ def main():
                                                   number_of_splits=num_splits,
                                                   apply_correction=stretch,
                                                   verbose=verbose)
+
+            if assess_quality:
+                if verbose:
+                    print("Calculating image quality score...")
+                # Calculate the quality score for this image:
+                quality_score = utils.calc_q_score(image_data[1])
+
             block_dims = meta_data[0]
             image_date = meta_data[1]
 
@@ -152,12 +164,6 @@ def main():
             if verbose:
                 print("Segment finished: %s: %f"
                       % (subtask, time.clock() - seg_time))
-
-            ###
-            # from lib import debug_tools
-            # debug_tools.display_watershed(image_data, segmented_blocks)
-            # quit()
-            ####
 
             # Classify image
             class_time = time.clock()
@@ -229,6 +235,7 @@ def main():
             f.create_dataset('classified', data=classified_image,
                              compression='gzip', compression_opts=9)
             f.attrs.create("pixel_counts", pixel_counts)
+            f.attrs.create("quality_score", quality_score)
 
         # Save color image for viewing
         if extended_output:
