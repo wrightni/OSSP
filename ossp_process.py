@@ -7,6 +7,7 @@ import shutil
 import argparse
 import time
 import h5py
+import csv
 from preprocess import prepare_image
 from segment import segment_image
 from classify import classify_image
@@ -198,11 +199,6 @@ def main():
             #   if there are no subtasks. 
             task.update_subtask(subtask)
 
-        # Write the total pixel counts to the database (or csv)
-        if extended_output:
-            utils.write_to_csv(os.path.join(dst_dir, task.get_id()), dst_dir,
-                               subtask, pixel_counts)
-
         # Writing the results to a sqlite database. (Only works for
         #   a specific database structure that has already been created)
         # db_name = 'ImageDatabase.db'
@@ -236,7 +232,7 @@ def main():
         input_ysize = src_ds.RasterYSize
 
         # Trim output image to correct size
-        classified_image = classified_image[:input_xsize, :input_ysize]
+        classified_image = classified_image[:input_ysize, :input_xsize]
 
         # Save the classified image output as a geotiff
         fileformat = "GTiff"
@@ -244,11 +240,10 @@ def main():
         dst_filename = os.path.join(dst_dir, image_name + '_classified.tif')
         driver = gdal.GetDriverByName(fileformat)
         dst_ds = driver.Create(dst_filename, xsize = input_xsize, ysize = input_ysize,
-                               bands = 1, eType=gdal.GDT_Byte)
+                               bands = 1, eType=gdal.GDT_Byte, options=["TILED=YES", "COMPRESS=LZW"])
 
         # Transfer the metadata from input image
         dst_ds.SetMetadata(src_ds.GetMetadata())
-        # dst_ds.SetMetadata('Pixel_Counts',pixel_counts)
         # Transfer the input projection
         dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  ##sets same geotransform as input
         dst_ds.SetProjection(src_ds.GetProjection())  ##sets same projection as input
@@ -260,10 +255,18 @@ def main():
         dst_ds = None
         src_ds = None
 
+        # Write extra data (total pixel counts and quality score to the database (or csv)
+        output_csv = os.path.join(dst_dir, image_name + '_md.csv')
+        with open(output_csv, "wb") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water"])
+            writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3]])
+
         # Save color image for viewing
         if extended_output:
             utils.save_color(classified_image,
                              os.path.join(dst_dir, image_name + '.png'))
+
 
         # Remove temp folders
         if working_dir is not None:

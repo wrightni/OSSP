@@ -461,7 +461,8 @@ def save_color(image, save_name, custom_colormap=False):
         shadow_color = [1.0, .545, .0]  #Orange
         cloud_color = [.27, .15, .50]       #Purple
 
-        custom_colormap = [empty_color,snow_color,gray_color,pond_color,water_color,shadow_color,cloud_color]
+        # custom_colormap = [empty_color,snow_color,gray_color,pond_color,water_color,shadow_color,cloud_color]
+        custom_colormap = [empty_color, snow_color, gray_color, pond_color, pond_color, water_color, cloud_color]
         custom_colormap = colors.ListedColormap(custom_colormap)
 
         #Making sure there is atleast one of every pixel so the colors map properly (only changes

@@ -210,9 +210,9 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
 
-    smooth_im_blue = filters.gaussian(image_data[2],sigma=1,preserve_range=True)
+    smooth_im_blue = filters.gaussian(image_data[2],sigma=2,preserve_range=True)
     # smooth_im_blue = image_data[2]
-    smooth_im_red = filters.gaussian(image_data[0],sigma=1,preserve_range=True)
+    smooth_im_red = filters.gaussian(image_data[0],sigma=2,preserve_range=True)
     # smooth_im_red = image_data[0]
     # Create a gradient image using a sobel filter
     sobel_image_blue = filters.scharr(smooth_im_blue)#image_data[2])
@@ -242,7 +242,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
     inv_sobel = 255-sobel_image
-    local_min = feature.peak_local_max(inv_sobel, min_distance=1,
+    local_min = feature.peak_local_max(inv_sobel, min_distance=5,
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
 
