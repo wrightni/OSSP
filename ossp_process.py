@@ -11,6 +11,7 @@ from preprocess import prepare_image
 from segment import segment_image
 from classify import classify_image
 from lib import utils
+import gdal
 
 
 def main():
@@ -110,13 +111,13 @@ def main():
         # proceed to the preprocessing step.
         image_name = task.get_id()
         if not task.is_split() or num_splits == 1:
-            image_data, meta_data = prepare_image(src_dir, image_name, image_type,
+            image_data, im_info = prepare_image(src_dir, image_name, image_type,
                                                   output_path=working_dir,
                                                   number_of_splits=num_splits,
                                                   apply_correction=stretch,
                                                   verbose=verbose)
-            block_dims = meta_data[0]
-            image_date = meta_data[1]
+            block_dims = im_info[0]
+            image_date = im_info[1]
 
         pixel_counts = [0, 0, 0, 0, 0]
         classified_image = []
@@ -206,8 +207,6 @@ def main():
         # part = image_name.split('_')[5]
         # utils.write_to_database(db_name, db_dir, image_id, part, pixel_counts)
 
-        image_name = os.path.splitext(image_name)[0]
-
         # Create a sorted list of the tasks. Then create the correct filename
         #   for each split saved on the drive.
         # Compile the split images back into a single image
@@ -224,11 +223,36 @@ def main():
         else:
             classified_image = clsf_split
 
-        # Save the classified image output
-        with h5py.File(os.path.join(dst_dir, image_name + '_classified.h5'), 'w') as f:
-            f.create_dataset('classified', data=classified_image,
-                             compression='gzip', compression_opts=9)
-            f.attrs.create("pixel_counts", pixel_counts)
+        # Open input file to read metadata/projection
+        src_ds = gdal.Open(os.path.join(src_dir,image_name))
+
+        input_xsize = src_ds.RasterXSize
+        input_ysize = src_ds.RasterYSize
+
+        # Trim output image to correct size
+        classified_image = classified_image[:input_xsize, :input_ysize]
+
+        # Save the classified image output as a geotiff
+        fileformat = "GTiff"
+        image_name = os.path.splitext(image_name)[0]
+        dst_filename = os.path.join(dst_dir, image_name + '_classified.tif')
+        driver = gdal.GetDriverByName(fileformat)
+        dst_ds = driver.Create(dst_filename, xsize = input_xsize, ysize = input_ysize,
+                               bands = 1, eType=gdal.GDT_Byte)
+
+        # Transfer the metadata from input image
+        dst_ds.SetMetadata(src_ds.GetMetadata())
+        # dst_ds.SetMetadata('Pixel_Counts',pixel_counts)
+        # Transfer the input projection
+        dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  ##sets same geotransform as input
+        dst_ds.SetProjection(src_ds.GetProjection())  ##sets same projection as input
+
+        # Write information to output
+        dst_ds.GetRasterBand(1).WriteArray(classified_image)
+
+        # Close dataset and write to disk
+        dst_ds = None
+        src_ds = None
 
         # Save color image for viewing
         if extended_output:

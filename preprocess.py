@@ -92,7 +92,7 @@ def prepare_image(input_path, image_name, image_type,
     #       early june date if no data can be found.
     #   Determine bands from dataset
     metadata = dataset.GetMetadata()
-    image_date = read_metadata(metadata, image_type)
+    image_date = parse_metadata(metadata, image_type)
     band_count = dataset.RasterCount
     if verbose:
         print("Number of Bands: %i" % band_count)
@@ -216,10 +216,10 @@ def prepare_image(input_path, image_name, image_type,
         if verbose:
             print("Band %s complete" % b)
 
-    meta_data = [dimensions, image_date]
+    im_info = [dimensions, image_date]
 
     # If number_of_splits is more than 1, bands_output will be empty
-    return bands_output, meta_data
+    return bands_output, im_info
 
 
 def find_splitsize(total_cols, total_rows, col_splits, row_splits):
@@ -284,7 +284,7 @@ def factor(number):
     return factors
 
 
-def read_metadata(metadata, image_type):
+def parse_metadata(metadata, image_type):
     """
     Parse image metadata information to find date.
     If image date cannot be found, return mean date of melt season (June1).

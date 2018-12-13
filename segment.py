@@ -58,7 +58,7 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         amplification_factor = 2.
         band_list = [1,1,1]
     elif image_type == 'wv02_ms':
-        sobel_threshold = 0.02
+        sobel_threshold = 0.05
         amplification_factor = 2.5
         band_list = [5,3,2]
     elif image_type == 'srgb':
@@ -135,21 +135,22 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     # while test_check:
     #     # test_check = check_results(im_block_dict,segmnt_block_list)
     #     watershed = segmnt_block_list[0]
-    #     original_1 = im_block_dict[1][0]
-    #     original_2 = im_block_dict[2][0]
-    #     original_3 = im_block_dict[3][0]
+    #     original_1 = im_block_dict[5][0]
+    #     original_2 = im_block_dict[3][0]
+    #     original_3 = im_block_dict[2][0]
     #
-    #     print np.amax(watershed)
+    #     # print np.amax(watershed)
     #
-    #     ws_bound = segmentation.find_boundaries(watershed)
-    #     ws_display = utils.create_composite([original_1, original_2, original_3])
-    #     ws_display[:, :, 0][ws_bound] = 240
-    #     ws_display[:, :, 1][ws_bound] = 80
-    #     ws_display[:, :, 2][ws_bound] = 80
+    #     # ws_bound = segmentation.find_boundaries(watershed)
+    #     ws_display = utils.create_composite([original_1[4000:,2000:], original_2[4000:,2000:], original_3[4000:,2000:]])
+    #     # ws_display[:, :, 0][ws_bound] = 240
+    #     # ws_display[:, :, 1][ws_bound] = 80
+    #     # ws_display[:, :, 2][ws_bound] = 80
     #
-    #     save_name = '/Volumes/ncwright/NASA/Ames/Results/GR_20150928/originals/09282015_raw/classified/s1_{}.png'
+    #     save_name = '/Volumes/ncwright/NASA/phase2/blue_vs_dark/original_{}.png'
     #     mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
     #     test_check = False
+    #     quit()
 
     # Writes the segmented data to disk. Used for providing segments to the
     #  training gui and when the image is split into multiple parts. Return None
@@ -209,9 +210,10 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
 
-    smooth_im_blue = filters.gaussian(image_data[2],sigma=2,preserve_range=True)
-    smooth_im_red = filters.gaussian(image_data[0],sigma=2,preserve_range=True)
-
+    smooth_im_blue = filters.gaussian(image_data[2],sigma=1,preserve_range=True)
+    # smooth_im_blue = image_data[2]
+    smooth_im_red = filters.gaussian(image_data[0],sigma=1,preserve_range=True)
+    # smooth_im_red = image_data[0]
     # Create a gradient image using a sobel filter
     sobel_image_blue = filters.scharr(smooth_im_blue)#image_data[2])
     sobel_image_red = filters.scharr(smooth_im_red)
@@ -240,7 +242,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
     inv_sobel = 255-sobel_image
-    local_min = feature.peak_local_max(inv_sobel, min_distance=5,
+    local_min = feature.peak_local_max(inv_sobel, min_distance=1,
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
 
