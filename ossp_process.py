@@ -243,7 +243,7 @@ def main():
                                bands = 1, eType=gdal.GDT_Byte, options=["TILED=YES", "COMPRESS=LZW"])
 
         # Transfer the metadata from input image
-        dst_ds.SetMetadata(src_ds.GetMetadata())
+        # dst_ds.SetMetadata(src_ds.GetMetadata())
         # Transfer the input projection
         dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  ##sets same geotransform as input
         dst_ds.SetProjection(src_ds.GetProjection())  ##sets same projection as input
