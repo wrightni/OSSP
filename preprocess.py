@@ -397,24 +397,32 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     threshold that is both less than the lowest peak and has fewer than 50% the number of pixels.
     10% and 50% picked empirically to give good results.
     """
-
     max_peak = np.where(bin_centers == peaks[-1])[0][0]  # Max intensity
     thresh_top = max_peak
     while hist[thresh_top] > hist[max_peak] * top:
         thresh_top += 2  # Upper limit is less sensitive, so step 2 at a time
+        # In the case that the top peak is already at/near the max bit value, limit the top
+        #   threshold to be the top bin of the histogram.
+        if thresh_top >= len(hist)-1:
+            thresh_top = len(hist)-1
+            break
 
     min_peak = np.where(bin_centers == peaks[0])[0][0]  # Min intensity
     thresh_bot = min_peak
     while hist[thresh_bot] > hist[min_peak] * bottom:
         thresh_bot -= 1
+        # Similar to above, limit the bottom threshold to the lowest histogram bin.
+        if thresh_bot <= 0:
+            thresh_bot = 0
+            break
 
     # Convert the histogram bin index to an intensity value
     lower = bin_centers[thresh_bot]
     upper = bin_centers[thresh_top]
-    # return lower, upper
 
     # Determine the width of the lower peak.
     lower_width = min_peak - thresh_bot
+
     # Limit the amount of stretch to a percentage of the total dynamic range 
     #   in the case that all three main surface types are not represented (fewer
     #   than 3 peaks)
