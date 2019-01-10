@@ -80,7 +80,10 @@ def main():
     stretch = args.nostretch
 
     # For Ames OIB Processing:
-    assess_quality = True
+    if image_type == 'srgb':
+        assess_quality = True
+    else:
+        assess_quality = False
     # Set a default quality score until this value is calculated
     quality_score = 1.
 
@@ -133,7 +136,6 @@ def main():
             image_date = im_info[1]
 
         pixel_counts = [0, 0, 0, 0, 0]
-        classified_image = []
         # Loop until all subtasks are complete.
         # Breaks when task.get_next_subtask() returns None (all subtasks complete)
         #   or if the task is complete.

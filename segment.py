@@ -49,21 +49,33 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         im_block_dict, image_type = load_from_disk(input_data, verbose)
 
  
-    #### Define Amplification and Threshold
+    #### Define segmentation parameters
+    # Sobel_threshold: Gradient values below this threshold will be set to zero
+    # Amplification factor: Amount to scale gradient values by after threshold has been applied
+    # Gauss_sigma: sigma value to use in the gaussian blur applied to the image prior to segmentation.
+    #   Value chosen here should be based on the quality and resolution of the image
+    # Feature_separation: minimum distance, in pixels, between the center point of multiple features. Use a lower value
+    #   for lower resolution (.5m) images, and higher resolution for aerial images (~.1m).
     # These values are dependent on the type of imagery being processed, and are
     #   mostly empirically derived.
     # band_list contains the three bands to be used for segmentation
     if image_type == 'pan':
         sobel_threshold = 0.1
         amplification_factor = 2.
+        gauss_sigma = 1
+        feature_separation = 1
         band_list = [1,1,1]
     elif image_type == 'wv02_ms':
         sobel_threshold = 0.05
         amplification_factor = 2.5
+        gauss_sigma = 1
+        feature_separation = 1
         band_list = [5,3,2]
     elif image_type == 'srgb':
         sobel_threshold = 0.03
         amplification_factor = 3.1
+        gauss_sigma = 2
+        feature_separation = 5
         band_list = [3,2,1]
 
     #### Segment each image block
@@ -77,7 +89,8 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
     NUMBER_OF_PROCESSES = threads
     block_procs = [Process(target=process_block_helper,
                            args=(block_queue, segmnt_block_queue,
-                                 sobel_threshold, amplification_factor))
+                                 sobel_threshold, amplification_factor,
+                                 gauss_sigma, feature_separation))
                    for _ in range(NUMBER_OF_PROCESSES)]
 
     # Start the worker processes.
@@ -195,7 +208,7 @@ def process_block_helper(im_block_queue, segmented_blocks,
     segmented_blocks.put(None)
 
 
-def watershed_transformation(image_data, sobel_threshold, amplification_factor):
+def watershed_transformation(image_data, sobel_threshold, amplification_factor, gauss_sigma, feature_separation):
     '''
     Runs a watershed transform on the main dataset
         1. Create a gradient image using the sobel algorithm
@@ -210,9 +223,9 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
 
-    smooth_im_blue = filters.gaussian(image_data[2],sigma=2,preserve_range=True)
+    smooth_im_blue = filters.gaussian(image_data[2],sigma=gauss_sigma,preserve_range=True)
     # smooth_im_blue = image_data[2]
-    smooth_im_red = filters.gaussian(image_data[0],sigma=2,preserve_range=True)
+    smooth_im_red = filters.gaussian(image_data[0],sigma=gauss_sigma,preserve_range=True)
     # smooth_im_red = image_data[0]
     # Create a gradient image using a sobel filter
     sobel_image_blue = filters.scharr(smooth_im_blue)#image_data[2])
@@ -242,7 +255,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor):
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
     inv_sobel = 255-sobel_image
-    local_min = feature.peak_local_max(inv_sobel, min_distance=5,
+    local_min = feature.peak_local_max(inv_sobel, min_distance=feature_separation,
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
 
