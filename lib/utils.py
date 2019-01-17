@@ -16,10 +16,10 @@ valid_extensions = ['.tif','.tiff','.jpg']
 
 class Task:
 
-    def __init__(self,name):
+    def __init__(self, name, directory):
         self.task_id = name
-        self.subtasks = {}
-        self.split = False      # True if image has been split
+        self.task_dir = directory
+        self.dst_dir = None
         self.complete = False
     
     def get_id(self):
@@ -28,78 +28,38 @@ class Task:
     def change_id(self, name):
         self.task_id = name
 
-    def add_subtask(self, subtask_id):
-        self.subtasks[subtask_id] = False
+    def set_src_dir(self, directory):
+        self.task_dir = directory
 
-    def update_subtask(self, subtask_id):
-        if self.has_subtask():
-            self.subtasks[subtask_id] = True
-        else:
-            self.mark_complete()
+    def get_src_dir(self):
+        return self.task_dir
 
-    def mark_split(self):
-        self.split = True
+    def set_dst_dir(self, dst_dir):
+        self.dst_dir = dst_dir
+
+    def get_dst_dir(self):
+        return self.dst_dir
 
     def mark_complete(self):
         self.complete = True
 
-    def is_split(self):
-        return self.split
-
     def is_complete(self):
         return self.complete
 
-    def get_tasklist(self):
-        return self.subtasks.keys()
 
-    def get_unfinished(self):
-        # Returns a list of unfinished subtasks
-        return [st for st in self.subtasks.keys() if not self.subtasks[st]]
-
-    def has_subtask(self):
-        if self.subtasks == {}:
-            return False
-        else:
-            return True
-
-    def get_subtask_status(self, subtask_id):
-        return self.subtasks[subtask_id]
-
-    # Returns the id and a command for the next subtask
-    #  that needs to be completed
-    def get_next_subtask(self):
-
-        if self.complete:
-            return None
-        # If there are no subtasks (ie num_splits == 1), return
-        #   the name of the task
-        elif self.subtasks == {}:
-            return None
-        # Otherwise return the next unfinished subtask
-        else:
-            # st is the split id
-            for st in self.subtasks.keys():
-                if self.subtasks[st] == False:
-                    return st
-
-        # If we get to this point, all splits are classified,
-        #  but need to be compiled (otherwise complete would be True)
-        # return self.task_id, 'compile'
-        return None
-
-
-def create_task_list(src_dir, dst_dir, num_splits):
+def create_task_list(src_dir, dst_dir):
 
     task_list = []
     # If the input is a file, return that file as the only task
     if os.path.isfile(src_dir):
         src_dir,src_file = os.path.split(src_dir)
-        task = Task(src_file)
-        if num_splits > 1:
-            for i in range(1,num_splits+1):
-                sname = os.path.splitext(src_file)[0] \
-                    + "_s{0:02d}of{1:02d}".format(i,num_splits)
-                task.add_subtask(sname)
+        task = Task(src_file, src_dir)
+
+        # Set the output directory if given, otherwise use the default
+        if dst_dir == "default":
+            task.set_dst_dir(os.path.join(src_dir, "classified"))
+        else:
+            task.set_dst_dir(dst_dir)
         return [task]
 
     for path_, directories, files in os.walk(src_dir):
@@ -122,19 +82,19 @@ def create_task_list(src_dir, dst_dir, num_splits):
                 continue
             
             ## Create the task object for this image
-            task = Task(file)
-            # Add a subtask for each image split
-            if num_splits > 1:
-                for i in range(1,num_splits+1):
-                    sname = image_name \
-                        + "_s{0:02d}of{1:02d}".format(i,num_splits)
-                    task.add_subtask(sname)
+            task = Task(file, path_)
+
+            # Set the output directory if given, otherwise use the default
+            if dst_dir == "default":
+                task.set_dst_dir(os.path.join(path_, "classified"))
+            else:
+                task.set_dst_dir(dst_dir)
 
             ## Check the output directory for completed files
-            if os.path.isdir(dst_dir):
-                clsf_imgs = os.listdir(dst_dir)
+            if os.path.isdir(task.get_dst_dir()):
+                clsf_imgs = os.listdir(task.get_dst_dir())
                 # Finished images have a consistant naming structure:
-                target_name = image_name + '_classified.h5'
+                target_name = image_name + '_classified.tif'
                 for img in clsf_imgs:
                     # Set this task to complete if we find the finished image
                     if img == target_name:
@@ -144,76 +104,9 @@ def create_task_list(src_dir, dst_dir, num_splits):
                 if task.is_complete():
                     continue
 
-                # If the image is not complete, look for finished subtasks
-                if num_splits > 1:
-                    # Look for the split name header:
-                    target_name = image_name + '_s'
-                    clsf_splits = [cs for cs in clsf_imgs if target_name in cs]
-                    for cs in clsf_splits:
-                        sname = cs.rsplit('_',1)[0] #remove trailing modifier
-                        task.update_subtask(sname)
-
-            ## Continue to determine task status
-
-            # Check if the image has already been split by looking in the
-            #   'splits' subdirectory
-            # If theres no split directory, we assume the image has not
-            #   been split
-            split_dir = os.path.join(path_,'splits')
-
-            if os.path.isdir(split_dir):
-                
-                # list the files in the splits directory
-                split_dir_files = os.listdir(split_dir)
-                # Loop through all files; find any that match 
-                #   the current image name. Potentially revisit this later
-                #   as this might trigger on files other than splits. 
-                
-                # split names have a consistant structure
-                sname_header = image_name + '_s'
-                # List the splits of the current image
-                splits = [os.path.splitext(s)[0] for s in split_dir_files if sname_header in s]
-                # List of the unprocessed splits
-                unfinished = task.get_unfinished()
-                # Compare the splits that exist with the ones we need, if there
-                #  are any that need to be processed, but do not exist, the
-                #  whole image needs to be split.
-                marker = False
-                for sname in unfinished:
-                    if sname not in splits:
-                        marker = True
-                # If all the needed splits exist, then mark the split task True.
-                if marker == False:
-                    task.mark_split()
-
             task_list.append(task)
 
     return task_list
-
-
-def calc_q_score(image):
-    """
-    Calculates a quality score of an input image by determining the number of
-    high frequency peaks in the fourier transformed image relative to the
-    image size.
-    QA Score < 0.025          poor
-    0.25 < QA Score < 0.035   medium
-    QA Score > 0.035          fine
-
-    """
-    # Calculate the 2D fourier transform of the image
-    im_fft = np.fft.fft2(image)
-    # Find the maximum frequency peak in the fft image
-    max_freq = np.amax(np.abs(im_fft))
-    # Set a threshold that is a fraction of the max peak
-    #  (Fraction determined empirically)
-    thresh = max_freq / 100000
-    # Determine the number of pixels above the threshold
-    th = np.sum([im_fft>thresh])
-    # QA Score is the percent of the pixels that are greater than the threshold
-    qa_score = float(th) / np.size(image)
-
-    return qa_score
 
 
 #### Load Training Dataset (TDS) (Label Vector and Feature Matrix)
@@ -272,6 +165,9 @@ def find_blocksize(x_dim, y_dim, desired_size):
     Method returns the first factor of the input dimension that is greater than
         the desired size.
     """
+    if x_dim <= desired_size or y_dim <= desired_size:
+        return x_dim, y_dim
+
     block_size_x = desired_size
     block_size_y = desired_size
 
@@ -279,16 +175,16 @@ def find_blocksize(x_dim, y_dim, desired_size):
     #   at least half a standard block in width.
     while (x_dim % block_size_x) <= (block_size_x / 2):
         block_size_x += 256
-        # Make sure the blocks don't get too big.
-        if block_size_x >= x_dim:
-            block_size_x = x_dim
-            break
+
+    # Make sure the blocks don't get too big.
+    if block_size_x >= x_dim:
+        block_size_x = x_dim
 
     while (y_dim % block_size_y) <= (block_size_y / 2):
         block_size_y += 256
-        if block_size_y >= y_dim:
-            block_size_y = y_dim
-            break
+
+    if block_size_y >= y_dim:
+        block_size_y = y_dim
 
     return block_size_x, block_size_y
 

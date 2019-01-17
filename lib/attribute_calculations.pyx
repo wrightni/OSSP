@@ -1,9 +1,9 @@
 # cython: cdivision=True
+# cython: boundscheck=False
+# cython: wraparound=False
 cimport cython
 import numpy as np
 from scipy import stats as spstats
-from cython.parallel import prange
-from libc.stdlib cimport abort, malloc, free
 from ctypes import *
 
 
@@ -13,12 +13,11 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     using the raw pixel values in input image. Attributes calculated for
     srgb type images.
     '''
-    feature_matrix = []
 
     cdef int num_ws
     cdef int x_dim, y_dim, num_bands
-    cdef double features[16]
     cdef int ws, b
+    cdef int ws_size
     # cdef int histogram_i
     # cdef int histogram_e
    
@@ -34,6 +33,9 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
 
     x_dim, y_dim, num_bands = np.shape(input_image)
 
+    feature_matrix = np.empty((num_ws,16))
+    cdef double [:, :] fm_view = feature_matrix
+
    #### Need to convert images to dtype c_int
     # input_image = np.ndarray.astype(input_image, c_int)
     # watershed_image = np.ndarray.astype(watershed_image, c_int)
@@ -47,65 +49,58 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
 
     for ws in range(num_ws):
 
-        # Check for empty watershed labels
-        if internal[0][ws] == []:
-            features = [0 for _ in range(16)]
-            feature_matrix.append(features)
-            continue
-
+        ws_size = len(internal[0][ws])
         # Average Pixel Intensity of each band
         for b in range(3):
-            features[b] = np.average(internal[b][ws])
-            if features[b] < 1:
-                features[b] = 1
+            fm_view[ws, b] = sum(internal[b][ws]) / float(ws_size)
+            if fm_view[ws, b] < 1:
+                fm_view[ws, b] = 1
 
         # Standard Deviation of each band
-        features[3] = np.std(internal[0][ws])
-        features[4] = np.std(internal[1][ws])
-        features[5] = np.std(internal[2][ws])
+        fm_view[ws, 3] = np.std(internal[0][ws])
+        fm_view[ws, 4] = np.std(internal[1][ws])
+        fm_view[ws, 5] = np.std(internal[2][ws])
 
         # See Miao et al for band ratios
         # Band Ratio 1
-        features[6] = ((features[2] - features[0]) /
-                       (features[2] + features[0]))
+        fm_view[ws, 6] = ((fm_view[ws, 2] - fm_view[ws, 0]) /
+                       (fm_view[ws, 2] + fm_view[ws, 0]))
         # Band Ratio 2
-        features[7] = ((features[2] - features[1]) /
-                       (features[2] + features[1]))
+        fm_view[ws, 7] = ((fm_view[ws, 2] - fm_view[ws, 1]) /
+                       (fm_view[ws, 2] + fm_view[ws, 1]))
         # Band Ratio 3
         # Prevent division by 0
-        if (2 * features[2] - features[1] - features[0]) < 1:
-            features[8] = 0
+        if (2 * fm_view[ws, 2] - fm_view[ws, 1] - fm_view[ws, 0]) < 1:
+            fm_view[ws, 8] = 0
         else:
-            features[8] = ((features[1] - features[0]) /
-                           (2 * features[2] - features[1] - features[0]))
+            fm_view[ws, 8] = ((fm_view[ws, 1] - fm_view[ws, 0]) /
+                           (2 * fm_view[ws, 2] - fm_view[ws, 1] - fm_view[ws, 0]))
 
         # Size of Superpixel
-        features[9] = len(internal[0][ws])
+        fm_view[ws, 9] = ws_size
 
         # Entropy
         histogram_i = np.bincount(internal[1][ws])
-        features[10] = spstats.entropy(histogram_i,base=2)
+        fm_view[ws, 10] = spstats.entropy(histogram_i, base=2)
 
         ## Neighborhood Values
         # N. Average Intensity
-        features[11] = np.average(external[1][ws])
+        fm_view[ws, 11] = sum(external[1][ws]) / float(len(external[1][ws]))
         # N. Standard Deviation
-        features[12] = np.std(external[1][ws])
+        fm_view[ws, 12] = np.std(external[1][ws])
         # N. Maximum Single Value
-        features[13] = np.amax(external[1][ws])
+        fm_view[ws, 13] = np.amax(external[1][ws])
         # N. Entropy
         histogram_e = np.bincount(external[1][ws])
-        features[14] = spstats.entropy(histogram_e,base=2)
+        fm_view[ws, 14] = spstats.entropy(histogram_e, base=2)
 
-        # Date of image acquisition
-        features[15] = 0
+        # Date of image acquisition (removed, but need placeholder)
+        fm_view[ws, 15] = 0
 
-        feature_matrix.append(features)
-
+    feature_matrix = np.copy(fm_view)
     return feature_matrix
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 def analyze_ms_image(input_image, watershed_image, segment_id=False):
     '''
     Cacluate the attributes for each segment given in watershed_image
@@ -118,6 +113,7 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
     cdef int x_dim, y_dim, num_bands
     cdef double features[18]
     cdef int ws, b
+    cdef int ws_size
 
     # If no segment id is provided, analyze the features for every watershed
     # in the input image. If a segment id is provided, just analyze the features
@@ -146,21 +142,14 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
                                         num_ws, num_bands)
 
     for ws in range(num_ws):
-        # Check for empty watershed labels
-        # if internal[0][ws] == []:
-        #     features = [0 for _ in range(18)]
-        #     feature_matrix.append(features)
-        #     continue
+
+        ws_size = len(internal[0][ws])
         # Average Pixel Intensity of each band
         for b in range(8):
-            # features[b] = np.average(internal[b][ws])
-            fm_view[ws,b] = sum(internal[b][ws]) / float(len(internal[b][ws]))
-            # features[b] = sum(internal[b][ws]) / float(len(internal[b][ws]))
-            # features[b] = 0
+            fm_view[ws,b] = sum(internal[b][ws]) / float(ws_size)
             if fm_view[ws,b] < 1:
                 fm_view[ws,b] = 1
-            # if features[b] < 1:
-            #     features[b] = 1
+
 
         # Important band ratios
         fm_view[ws, 8] = fm_view[ws, 0] / fm_view[ws, 2]
@@ -171,26 +160,15 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
         fm_view[ws, 13] = fm_view[ws, 3] / fm_view[ws, 7]
         fm_view[ws, 14] = fm_view[ws, 4] / fm_view[ws, 6]
 
-        # features[8] = (features[0] / features[2])
-        # features[9] = (features[1] / features[6])
-        # features[10] = (features[4] / features[6])
-        # features[11] = (features[3] / features[5])
-        # features[12] = (features[3] / features[6])
-        # features[13] = (features[3] / features[7])
-        # features[14] = (features[4] / features[6])
-
         # N. Average Intensity
         fm_view[ws, 15] = sum(external[4][ws]) / float(len(external[4][ws]))
-        # features[15] = 0#np.average(external[4][ws])
 
         # b1-b7 / b1+b7
         fm_view[ws, 16] = ((fm_view[ws, 0] - fm_view[ws, 6]) / (fm_view[ws, 0] + fm_view[ws, 6]))
-        # features[16] = ((features[0] - features[6]) / (features[0] + features[6]))
+
         # b3-b5 / b3+b5
         fm_view[ws, 17] = ((fm_view[ws, 2] - fm_view[ws, 4]) / (fm_view[ws, 2] + fm_view[ws, 4]))
-        # features[17] = ((features[2] - features[4]) / (features[2] + features[4]))
 
-        # feature_matrix.append(features)
     feature_matrix = np.copy(fm_view)
     return feature_matrix
 

@@ -3,10 +3,7 @@
 # Nicholas Wright
 
 import os
-import shutil
 import argparse
-import time
-import h5py
 import csv
 import numpy as np
 import preprocess as pp
@@ -28,7 +25,7 @@ def main():
                         help="training data file")
     parser.add_argument("--training_label", type=str, default=None,
                         help="name of training classification list")
-    parser.add_argument("-o", "--output_dir", type=str, default=None,
+    parser.add_argument("-o", "--output_dir", type=str, default="default",
                         help="directory to place output results.")
     parser.add_argument("-s", "--splits", metavar='int', type=int, default=1,
                         help="number of subdividing splits to preform on raw image")
@@ -65,16 +62,10 @@ def main():
         tds_label = image_type
     else:
         tds_label = args.training_label
-    # Default output directory (if not provided)
-    if args.output_dir is None:
-        dst_dir = os.path.join(src_dir, 'classified')
-    else:
-        dst_dir = args.output_dir
-    if not os.path.isdir(dst_dir):
-        os.makedirs(dst_dir)
+    # Default output directory
+    #   (if not provided this gets set when the tasks are created)
+    dst_dir = args.output_dir
 
-    num_splits = args.splits
-    num_threads = args.parallel
     verbose = args.verbose
     extended_output = args.extended_output
     stretch = args.nostretch
@@ -87,18 +78,12 @@ def main():
     # Set a default quality score until this value is calculated
     quality_score = 1.
 
-    # Directory where temporary files are saved
-    # if num_splits > 1:
-    #     working_dir = os.path.join(src_dir, 'splits')
-    # else:
-    #     working_dir = None
-
     # Prepare a list of images to be processed based on the user input
     #   list of task objects based on the files in the input directory.
     #   Each task is an image to process, and has a subtask for each split
     #   of that image. 
-    task_list = utils.create_task_list(os.path.join(src_dir, src_file),
-                                       dst_dir, num_splits)
+    task_list = utils.create_task_list(os.path.join(src_dir, src_file), dst_dir)
+
     # Load Training Data
     tds = utils.load_tds(tds_file, tds_label)
 
@@ -115,6 +100,10 @@ def main():
         # Skip this task if it is already marked as complete
         if task.is_complete():
             continue
+
+        # Make the output directory if it doesnt already exist
+        if not os.path.isdir(task.get_dst_dir()):
+            os.makedirs(task.get_dst_dir())
 
         # Open the image dataset with gdal
         full_image_name = os.path.join(src_dir, task.get_id())
@@ -149,8 +138,8 @@ def main():
         # Create a blank output image dataset
         # Save the classified image output as a geotiff
         fileformat = "GTiff"
-        image_name = os.path.splitext(full_image_name)[0]
-        dst_filename = os.path.join(dst_dir, image_name + '_classified.tif')
+        image_name_noext = os.path.splitext(task.get_id())[0]
+        dst_filename = os.path.join(task.get_dst_dir(), image_name_noext + '_classified.tif')
         driver = gdal.GetDriverByName(fileformat)
         dst_ds = driver.Create(dst_filename, xsize=x_dim, ysize=y_dim,
                                bands=1, eType=gdal.GDT_Byte, options=["TILED=YES", "COMPRESS=LZW"])
@@ -167,7 +156,7 @@ def main():
         # Find the appropriate image block read size
         block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
         if verbose:
-            print("block size: [{},{}]".format(block_size_x,block_size_y))
+            print("block size: [{},{}]".format(block_size_x, block_size_y))
         # Convert the block size into a list of the top (y) left (x) coordinate of each block
         #   and iterate over both lists to process each block
         y_blocks = range(0, y_dim, block_size_y)
@@ -199,12 +188,17 @@ def main():
                 if image_data.ndim == 2:
                     image_data = np.reshape(image_data, (1, read_size_y, read_size_x))
 
+                # Calcualate the quality score on an arbitrary band
+                if assess_quality:
+                    quality_score = pp.calc_q_score(image_data[0])
+
                 # Apply correction to block based on earlier histogram analysis (if applying correction)
                 # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
                 image_data = pp.rescale_band(image_data, lower, upper)
 
                 # Segment image
-                image_data, segmented_blocks = segment_image(image_data, image_type=image_type)
+                segmented_blocks = segment_image(image_data, image_type=image_type)
+
                 # Update the progress bar
                 if verbose: pbar.update()
 
@@ -218,8 +212,6 @@ def main():
                 for i in range(len(pixel_counts)):
                     pixel_counts[i] += pixel_counts_block[i]
 
-                ## Write this block to the output image
-
                 # Write information to output
                 dst_ds.GetRasterBand(1).WriteArray(classified_block, xoff=x, yoff=y)
                 dst_ds.FlushCache()
@@ -229,13 +221,12 @@ def main():
                 # Update the progress bar
                 if verbose: pbar.update()
 
-
         # Close dataset and write to disk
         dst_ds = None
         src_ds = None
 
         # Write extra data (total pixel counts and quality score to the database (or csv)
-        output_csv = os.path.join(dst_dir, image_name + '_md.csv')
+        output_csv = os.path.join(task.get_dst_dir(), image_name_noext + '_md.csv')
         with open(output_csv, "wb") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water"])

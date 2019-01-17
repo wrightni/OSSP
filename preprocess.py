@@ -253,6 +253,31 @@ def find_blocksize(x_dim, y_dim, desired_size):
     return block_size_x, block_size_y
 
 
+def calc_q_score(image):
+    """
+    Calculates a quality score of an input image by determining the number of
+    high frequency peaks in the fourier transformed image relative to the
+    image size.
+    QA Score < 0.025          poor
+    0.25 < QA Score < 0.035   medium
+    QA Score > 0.035          fine
+
+    """
+    # Calculate the 2D fourier transform of the image
+    im_fft = np.fft.fft2(image)
+    # Find the maximum frequency peak in the fft image
+    max_freq = np.amax(np.abs(im_fft))
+    # Set a threshold that is a fraction of the max peak
+    #  (Fraction determined empirically)
+    thresh = max_freq / 100000
+    # Determine the number of pixels above the threshold
+    th = np.sum([im_fft>thresh])
+    # QA Score is the percent of the pixels that are greater than the threshold
+    qa_score = float(th) / np.size(image)
+
+    return qa_score
+
+
 def factor(number):
     """
     Returns a sorted list of all of the factors of number using trial division.

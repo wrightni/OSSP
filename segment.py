@@ -86,16 +86,16 @@ def segment_image(input_data, image_type=False):
     #  side by side with the segmented image.
     # print(np.amax(segmented_data))
 
-    ws_bound = segmentation.find_boundaries(segmented_data)
-    ws_display = utils.create_composite(image_data)
-    ws_display[:, :, 0][ws_bound] = 240
-    ws_display[:, :, 1][ws_bound] = 80
-    ws_display[:, :, 2][ws_bound] = 80
+    # ws_bound = segmentation.find_boundaries(segmented_data)
+    # ws_display = utils.create_composite(image_data)
+    # ws_display[:, :, 0][ws_bound] = 240
+    # ws_display[:, :, 1][ws_bound] = 80
+    # ws_display[:, :, 2][ws_bound] = 80
+    #
+    # save_name = '/Users/nicholas/Desktop/original_{}.png'
+    # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
 
-    save_name = '/Users/nicholas/Desktop/original_{}.png'
-    mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
-
-    return input_data, segmented_data
+    return segmented_data
 
     # Writes the segmented data to disk. Used for providing segments to the
     #  training gui and when the image is split into multiple parts. Return None
