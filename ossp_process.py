@@ -8,7 +8,8 @@ import argparse
 import time
 import h5py
 import csv
-from preprocess import prepare_image
+import numpy as np
+import preprocess as pp
 from segment import segment_image
 from classify import classify_image
 from lib import utils
@@ -42,7 +43,6 @@ def main():
                         ''')
     parser.add_argument("-c", "--nostretch", action="store_false",
                         help="Do not apply a histogram stretch image correction to input.")
-
 
     # Parse Arguments
     args = parser.parse_args()
@@ -88,10 +88,10 @@ def main():
     quality_score = 1.
 
     # Directory where temporary files are saved
-    if num_splits > 1:
-        working_dir = os.path.join(src_dir, 'splits')
-    else:
-        working_dir = None
+    # if num_splits > 1:
+    #     working_dir = os.path.join(src_dir, 'splits')
+    # else:
+    #     working_dir = None
 
     # Prepare a list of images to be processed based on the user input
     #   list of task objects based on the files in the input directory.
@@ -116,142 +116,119 @@ def main():
         if task.is_complete():
             continue
 
-        # If the image has not yet been split or if no splitting was requested,
-        # proceed to the preprocessing step.
-        image_name = task.get_id()
-        if not task.is_split() or num_splits == 1:
-            image_data, im_info = prepare_image(src_dir, image_name, image_type,
-                                                  output_path=working_dir,
-                                                  number_of_splits=num_splits,
-                                                  apply_correction=stretch,
-                                                  verbose=verbose)
-
-            if assess_quality:
-                if verbose:
-                    print("Calculating image quality score...")
-                # Calculate the quality score for this image:
-                quality_score = utils.calc_q_score(image_data[1])
-
-            block_dims = im_info[0]
-            image_date = im_info[1]
-
-        pixel_counts = [0, 0, 0, 0, 0]
-        # Loop until all subtasks are complete.
-        # Breaks when task.get_next_subtask() returns None (all subtasks complete)
-        #   or if the task is complete.
-        while True:
-
-            if task.is_complete():
-                break
-            elif task.has_subtask():
-                subtask = task.get_next_subtask()
-
-                if subtask is None:
-                    break
-                # If there is a subtask, the image data is stored in a split on the
-                #   drive. Subtask == {} when there are no subtasks.
-                image_data = os.path.join(working_dir, subtask) + '.h5'
-                with h5py.File(image_data, 'r') as f:
-                    block_dims = f.attrs.get("Block Dimensions")
-                    image_date = f.attrs.get("Image Date")
-            else:
-                subtask = task.get_id()
-
-            # Segment image
-            seg_time = time.clock()
+        # Open the image dataset with gdal
+        full_image_name = os.path.join(src_dir, task.get_id())
+        if os.path.isfile(full_image_name):
             if verbose:
-                print("Segmenting image: %s" % subtask)
-            image_data, segmented_blocks = segment_image(image_data,
-                                                         image_type=image_type,
-                                                         threads=num_threads,
-                                                         verbose=verbose)
-            if verbose:
-                print("Segment finished: %s: %f"
-                      % (subtask, time.clock() - seg_time))
-
-            # Classify image
-            class_time = time.clock()
-            if verbose:
-                print("Classifying image: %s" % subtask)
-            classified_blocks = classify_image(image_data, segmented_blocks, tds,
-                                               [image_type, image_date], threads=num_threads,
-                                               verbose=verbose)
-            if verbose:
-                print("Classification finished: %s: %f"
-                      % (subtask, time.clock() - class_time))
-
-            # Hold onto the output of this subtask
-            clsf_split = utils.compile_subimages(classified_blocks, block_dims[0],
-                                                 block_dims[1])
-
-            # Save the results to the temp folder if there is more than 1 split
-            if num_splits > 1:
-                with h5py.File(os.path.join(working_dir, subtask + '_classified.h5'),
-                               'w') as f:
-                    f.create_dataset('classified', data=clsf_split,
-                                     compression='gzip', compression_opts=3)
-
-            # Add the pixel counts from this classified split to the 
-            #   running total.
-            pixel_counts_split = utils.count_features(clsf_split)
-            for i in range(len(pixel_counts)):
-                pixel_counts[i] += pixel_counts_split[i]
-
-            # Mark this subtask as complete. This sets task.complete to True
-            #   if there are no subtasks. 
-            task.update_subtask(subtask)
-
-        # Writing the results to a sqlite database. (Only works for
-        #   a specific database structure that has already been created)
-        # db_name = 'ImageDatabase.db'
-        # db_dir = '/media/sequoia/DigitalGlobe/'
-        # image_name = task.get_id()
-        # image_name = os.path.splitext(image_name)[0]
-        # image_id = image_name.split('_')[2]
-        # part = image_name.split('_')[5]
-        # utils.write_to_database(db_name, db_dir, image_id, part, pixel_counts)
-
-        # Create a sorted list of the tasks. Then create the correct filename
-        #   for each split saved on the drive.
-        # Compile the split images back into a single image
-        if num_splits > 1:
-            if verbose:
-                print("Recompiling: %s" % task.get_id())
-            clsf_splits = []
-            task_list = task.get_tasklist()
-            task_list.sort()
-            for task_id in task_list:
-                cname = os.path.join(working_dir, task_id + "_classified.h5")
-                clsf_splits.append(cname)
-            classified_image = utils.stitch(clsf_splits)
+                print("Loading image...")
+            src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
         else:
-            classified_image = clsf_split
+            print "File not found: {}".format(full_image_name)
+            continue
 
-        # Open input file to read metadata/projection
-        src_ds = gdal.Open(os.path.join(src_dir,image_name))
+        # Read metadata to get image
+        metadata = src_ds.GetMetadata()
+        image_date = pp.parse_metadata(metadata, image_type)
 
-        input_xsize = src_ds.RasterXSize
-        input_ysize = src_ds.RasterYSize
+        # Set necessary parameters for reading image 1 block at a time
+        x_dim = src_ds.RasterXSize
+        y_dim = src_ds.RasterYSize
+        desired_block_size = 6400
 
-        # Trim output image to correct size
-        classified_image = classified_image[:input_ysize, :input_xsize]
+        # Analyze input image histogram (if applying correction)
+        if stretch:
+            lower, upper = pp.histogram_threshold(src_ds, image_type)
+        elif image_type == 'wv02_ms' or image_type == 'pan':
+            lower = 1
+            upper = 2047
+        # Can assume srgb images are already 8bit
+        else:
+            lower = 1
+            upper = 255
 
+        # Create a blank output image dataset
         # Save the classified image output as a geotiff
         fileformat = "GTiff"
-        image_name = os.path.splitext(image_name)[0]
+        image_name = os.path.splitext(full_image_name)[0]
         dst_filename = os.path.join(dst_dir, image_name + '_classified.tif')
         driver = gdal.GetDriverByName(fileformat)
-        dst_ds = driver.Create(dst_filename, xsize = input_xsize, ysize = input_ysize,
-                               bands = 1, eType=gdal.GDT_Byte, options=["TILED=YES", "COMPRESS=LZW"])
+        dst_ds = driver.Create(dst_filename, xsize=x_dim, ysize=y_dim,
+                               bands=1, eType=gdal.GDT_Byte, options=["TILED=YES", "COMPRESS=LZW"])
 
         # Transfer the metadata from input image
         # dst_ds.SetMetadata(src_ds.GetMetadata())
         # Transfer the input projection
-        dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  ##sets same geotransform as input
-        dst_ds.SetProjection(src_ds.GetProjection())  ##sets same projection as input
+        dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
+        dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
 
-        # Write information to output
-        dst_ds.GetRasterBand(1).WriteArray(classified_image)
+        # Set an empty value for the pixel counter
+        pixel_counts = [0, 0, 0, 0, 0]
+
+        # Find the appropriate image block read size
+        block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
+        if verbose:
+            print("block size: [{},{}]".format(block_size_x,block_size_y))
+        # Convert the block size into a list of the top (y) left (x) coordinate of each block
+        #   and iterate over both lists to process each block
+        y_blocks = range(0, y_dim, block_size_y)
+        x_blocks = range(0, x_dim, block_size_x)
+
+        # Display a progress bar
+        if verbose:
+            try:
+                from tqdm import tqdm
+            except ImportError:
+                print "Install tqdm to display progress bar."
+                verbose = False
+            else:
+                pbar = tqdm(total=len(y_blocks)*len(x_blocks)*2, unit='block')
+
+        # Iterate over the image blocks
+        for y in y_blocks:
+            # Check that this block will lie within the image dimensions
+            read_size_y = check_read_size(y, block_size_y, y_dim)
+
+            for x in x_blocks:
+                # Check that this block will lie within the image dimensions
+                read_size_x = check_read_size(x, block_size_x, x_dim)
+
+                # Load block data with gdal (offset and block size)
+                image_data = src_ds.ReadAsArray(x, y, read_size_x, read_size_y)
+
+                # Restructure raster for panchromatic images:
+                if image_data.ndim == 2:
+                    image_data = np.reshape(image_data, (1, read_size_y, read_size_x))
+
+                # Apply correction to block based on earlier histogram analysis (if applying correction)
+                # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
+                image_data = pp.rescale_band(image_data, lower, upper)
+
+                # Segment image
+                image_data, segmented_blocks = segment_image(image_data, image_type=image_type)
+                # Update the progress bar
+                if verbose: pbar.update()
+
+                # Classify image
+                classified_block = classify_image(image_data, segmented_blocks,
+                                                  tds, [image_type, image_date])
+
+                # Add the pixel counts from this classified split to the
+                #   running total.
+                pixel_counts_block = utils.count_features(classified_block)
+                for i in range(len(pixel_counts)):
+                    pixel_counts[i] += pixel_counts_block[i]
+
+                ## Write this block to the output image
+
+                # Write information to output
+                dst_ds.GetRasterBand(1).WriteArray(classified_block, xoff=x, yoff=y)
+                dst_ds.FlushCache()
+                # dst_ds = None
+                # quit()
+
+                # Update the progress bar
+                if verbose: pbar.update()
+
 
         # Close dataset and write to disk
         dst_ds = None
@@ -264,19 +241,22 @@ def main():
             writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water"])
             writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3]])
 
-        # Save color image for viewing
-        if extended_output:
-            utils.save_color(classified_image,
-                             os.path.join(dst_dir, image_name + '.png'))
+        # # Save color image for viewing
+        # if extended_output:
+        #     utils.save_color(classified_image,
+        #                      os.path.join(dst_dir, image_name + '.png'))
 
-
-        # Remove temp folders
-        if working_dir is not None:
-            if os.path.isdir(working_dir):
-                shutil.rmtree(working_dir)
-
+        # Close the progress bar
         if verbose:
-            print("Done")
+            pbar.close()
+            print "Finished Processing."
+
+
+def check_read_size(y, block_size_y, y_dim):
+    if y + block_size_y < y_dim:
+        return block_size_y
+    else:
+        return y_dim - y
 
 
 if __name__ == "__main__":

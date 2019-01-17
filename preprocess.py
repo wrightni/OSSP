@@ -113,47 +113,7 @@ def prepare_image(input_path, image_name, image_type,
     #   If number_of_splits > 1, saves each split in its own .h5 file with
     #       n datasets; one for each spectral band.
 
-    # Set the percentile thresholds at a temporary value until finding the 
-    #   appropriate ones considering all three bands.
-    lower = -1
-    upper = -1
-
-    # First for loop finds the threshold based on all bands
-    for b in range(1, band_count + 1):
-        # Flag for choosing whether to apply correction
-        if apply_correction is False:
-            continue
-
-        if verbose:
-            print("Analyzing band %s data..." % b)
-        # Read the band information from the gdal dataset
-        band = dataset.GetRasterBand(b)
-
-        # Find the min and max image values
-        bmin, bmax = band.ComputeRasterMinMax()
-
-        # Determine the histogram using gdal
-        nbins = int(bmax - bmin)
-        hist = band.GetHistogram(bmin, bmax, nbins, approx_ok=0)
-        bin_centers = range(int(bmin), int(bmax))
-        bin_centers = np.array(bin_centers)
-
-        # Remove the image data from memory for now
-        band = None
-
-        # Find the strongest (3) peaks in the band histogram
-        peaks = find_peaks(hist, bin_centers)
-        # Find the high and low threshold for rescaling image intensity
-        lower_b, upper_b = find_threshold(hist, bin_centers,
-                                          peaks, image_type)
-
-        # For sRGB we want to scale each band by the min and max of all 
-        #   bands. Check thresholds found for this band against any that
-        #   have been previously found, and adjust if necessary. 
-        if lower_b < lower or lower == -1:
-            lower = lower_b
-        if upper_b > upper or upper == -1:
-            upper = upper_b
+    lower, upper = histogram_threshold(dataset)
 
     # Now that we've checked the histograms of each band in the image,
     #   we can rescale and save each band.
@@ -241,7 +201,7 @@ def find_splitsize(total_cols, total_rows, col_splits, row_splits):
     return split_cols, split_rows
 
 
-def find_blocksize(x_dim, y_dim, desired_size):
+def find_blocksize_old(x_dim, y_dim, desired_size):
     """
     Finds the appropriate block size for an input image of a given dimensions.
     Method returns the first factor of the input dimension that is greater than
@@ -264,6 +224,33 @@ def find_blocksize(x_dim, y_dim, desired_size):
             break
 
     return int(block_x), int(block_y)
+
+
+def find_blocksize(x_dim, y_dim, desired_size):
+    """
+    Finds the appropriate block size for an input image of a given dimensions.
+    Method returns the first factor of the input dimension that is greater than
+        the desired size.
+    """
+    block_size_x = desired_size
+    block_size_y = desired_size
+
+    # Ensure that chosen block size divides into the image dimension with a remainder that is
+    #   at least half a standard block in width.
+    while (x_dim % block_size_x) <= (block_size_x / 2):
+        block_size_x += 256
+        # Make sure the blocks don't get too big.
+        if block_size_x >= x_dim:
+            block_size_x = x_dim
+            break
+
+    while (y_dim % block_size_y) <= (block_size_y / 2):
+        block_size_y += 256
+        if block_size_y >= y_dim:
+            block_size_y = y_dim
+            break
+
+    return block_size_x, block_size_y
 
 
 def factor(number):
@@ -317,6 +304,51 @@ def parse_metadata(metadata, image_type):
     doy = d.toordinal() - datetime.date(d.year, 1, 1).toordinal() + 1
 
     return doy
+
+
+def histogram_threshold(gdal_dataset, image_type):
+    # Set the percentile thresholds at a temporary value until finding the
+    #   appropriate ones considering all three bands. These numbers are chosen to
+    #   always get reset on first loop (for bitdepth <= uint16)
+    lower = 2048
+    upper = -1
+
+    # Determine the number of bands in the dataset
+    band_count = gdal_dataset.RasterCount
+
+    # First for loop finds the threshold based on all bands
+    for b in range(1, band_count + 1):
+
+        # Read the band information from the gdal dataset
+        band = gdal_dataset.GetRasterBand(b)
+
+        # Find the min and max image values
+        bmin, bmax = band.ComputeRasterMinMax()
+
+        # Determine the histogram using gdal
+        nbins = int(bmax - bmin)
+        hist = band.GetHistogram(bmin, bmax, nbins, approx_ok=0)
+        bin_centers = range(int(bmin), int(bmax))
+        bin_centers = np.array(bin_centers)
+
+        # Remove the image data from memory for now
+        band = None
+
+        # Find the strongest (3) peaks in the band histogram
+        peaks = find_peaks(hist, bin_centers)
+        # Find the high and low threshold for rescaling image intensity
+        lower_b, upper_b = find_threshold(hist, bin_centers,
+                                          peaks, image_type)
+
+        # For sRGB we want to scale each band by the min and max of all
+        #   bands. Check thresholds found for this band against any that
+        #   have been previously found, and adjust if necessary.
+        if lower_b < lower:
+            lower = lower_b
+        if upper_b > upper:
+            upper = upper_b
+
+    return lower, upper
 
 
 def find_peaks(hist, bin_centers):

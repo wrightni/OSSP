@@ -7,7 +7,6 @@ import time
 import numpy as np
 import os
 import h5py
-from multiprocessing import Process, Queue
 from skimage import filters, morphology, feature, exposure, img_as_ubyte
 from scipy import ndimage
 from lib import utils
@@ -19,35 +18,33 @@ import matplotlib.image as mimg
 # tqdm for progress bar
 
 
-def segment_image(input_data, image_type=False, test_check=False, threads=1,
-                  write_results=False, dst_file=False, verbose=False):
+def segment_image(input_data, image_type=False):
     '''
     Wrapper function that handles all of the processing to create watersheds
     '''
 
-    #### Check the input format and read appropriate values
-    try:
-        data_file = h5py.File(input_data,'r')
-    except TypeError:
-        # Input_data is not a string (so it is image data?)
-        im_block_dict = input_data     # Does this need to be checked first?
-        input_data = None
-        pass
-    except AttributeError:
-        # Input_data is not a string (so it is image data?)
-        im_block_dict = input_data     # Does this need to be checked first?
-        input_data = None
-        pass
-    except IOError:
-        # Input_data is string, but not a valid hdf5 file
-        raise
-    else:
-        # We opened the file to test, but aren't reading it here.
-        data_file.close()
-        # Destination file for writing watersheds is the same as the input file
-        dst_file = input_data
-        im_block_dict, image_type = load_from_disk(input_data, verbose)
-
+    # #### Check the input format and read appropriate values
+    # try:
+    #     data_file = h5py.File(input_data,'r')
+    # except TypeError:
+    #     # Input_data is not a string (so it is image data?)
+    #     im_block_dict = input_data     # Does this need to be checked first?
+    #     input_data = None
+    #     pass
+    # except AttributeError:
+    #     # Input_data is not a string (so it is image data?)
+    #     im_block_dict = input_data     # Does this need to be checked first?
+    #     input_data = None
+    #     pass
+    # except IOError:
+    #     # Input_data is string, but not a valid hdf5 file
+    #     raise
+    # else:
+    #     # We opened the file to test, but aren't reading it here.
+    #     data_file.close()
+    #     # Destination file for writing watersheds is the same as the input file
+    #     dst_file = input_data
+    #     im_block_dict, image_type = load_from_disk(input_data, verbose)
  
     #### Define segmentation parameters
     # Sobel_threshold: Gradient values below this threshold will be set to zero
@@ -64,148 +61,50 @@ def segment_image(input_data, image_type=False, test_check=False, threads=1,
         amplification_factor = 2.
         gauss_sigma = 1
         feature_separation = 1
-        band_list = [1,1,1]
+        band_list = [0, 0, 0]
     elif image_type == 'wv02_ms':
-        sobel_threshold = 0.05
+        sobel_threshold = 0.06
         amplification_factor = 2.5
-        gauss_sigma = 1
+        gauss_sigma = 1.5
         feature_separation = 1
-        band_list = [5,3,2]
-    elif image_type == 'srgb':
+        band_list = [4, 2, 1]
+    else:   #image_type == 'srgb'
         sobel_threshold = 0.03
         amplification_factor = 3.1
         gauss_sigma = 2
         feature_separation = 5
-        band_list = [3,2,1]
+        band_list = [2, 1, 0]
 
-    #### Segment each image block
-    # segmnt_block_queue is a queue that stores the result of the watershed
-    #   segmentation, where each element is one image block.
-    segmnt_block_queue = Queue()
-    num_blocks = len(im_block_dict[1])
-    block_queue = construct_block_queue(im_block_dict, band_list, num_blocks)
+    image_data = [input_data[band_list[0]],
+                  input_data[band_list[1]],
+                  input_data[band_list[2]]]
 
-    # Define the number of threads to create
-    NUMBER_OF_PROCESSES = threads
-    block_procs = [Process(target=process_block_helper,
-                           args=(block_queue, segmnt_block_queue,
-                                 sobel_threshold, amplification_factor,
-                                 gauss_sigma, feature_separation))
-                   for _ in range(NUMBER_OF_PROCESSES)]
-
-    # Start the worker processes.
-    for proc in block_procs:
-        # Add a stop command to the end of the queue for each of the
-        #   processes started. This will signal for the process to stop.
-        block_queue.put('STOP')
-        # Start the process
-        proc.start()
-
-    # Display a progress bar
-    if verbose:
-        try:
-            from tqdm import tqdm
-        except ImportError:
-            print "Install tqdm to display progress bar."
-            verbose = False
-        else:
-            pbar = tqdm(total=num_blocks, unit='block')
-
-    # Each process adds the output values to segmnt_block_queue when it
-    #   finishes a row. Adds 'None' when there are no more rows left
-    #   in the queue.
-    # This loop continues as long as all of the processes have not finished
-    #   (i.e. fewer than NUMBER_OF_PROCESSES have returned None). When a row is
-    #   added to the output list, the tqdm progress bar updates.
-
-    # Initialize the output dataset as an empty list of length = input dataset
-    #   This needs to be initialized since blocks will be added non-sequentially
-    segmnt_block_list = [None for _ in range(num_blocks)]
-    finished_threads = 0
-    while finished_threads < NUMBER_OF_PROCESSES:
-        if not segmnt_block_queue.empty():
-            val = segmnt_block_queue.get()
-            if val == None:
-                finished_threads += 1
-            else:
-                block_num = val[0]
-                segmnt_data = val[1]
-                segmnt_block_list[block_num] = segmnt_data
-                if verbose: pbar.update()
-
-    # Close the progress bar
-    if verbose:
-        pbar.close()
-        print "Finished Processing. Closing threads..."
-
-    # Join all of the processes back together
-    for proc in block_procs:
-        proc.join()
+    segmented_data = watershed_transformation(image_data,sobel_threshold,amplification_factor,
+                                    gauss_sigma,feature_separation)
 
     # Method that provides the user an option to view the original image
     #  side by side with the segmented image.
-    # test_check = True
-    # while test_check:
-    #     # test_check = check_results(im_block_dict,segmnt_block_list)
-    #     watershed = segmnt_block_list[0]
-    #     original_1 = im_block_dict[5][0]
-    #     original_2 = im_block_dict[3][0]
-    #     original_3 = im_block_dict[2][0]
-    #
-    #     # print np.amax(watershed)
-    #
-    #     # ws_bound = segmentation.find_boundaries(watershed)
-    #     ws_display = utils.create_composite([original_1[4000:,2000:], original_2[4000:,2000:], original_3[4000:,2000:]])
-    #     # ws_display[:, :, 0][ws_bound] = 240
-    #     # ws_display[:, :, 1][ws_bound] = 80
-    #     # ws_display[:, :, 2][ws_bound] = 80
-    #
-    #     save_name = '/Volumes/ncwright/NASA/phase2/blue_vs_dark/original_{}.png'
-    #     mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
-    #     test_check = False
-    #     quit()
+    # print(np.amax(segmented_data))
+
+    ws_bound = segmentation.find_boundaries(segmented_data)
+    ws_display = utils.create_composite(image_data)
+    ws_display[:, :, 0][ws_bound] = 240
+    ws_display[:, :, 1][ws_bound] = 80
+    ws_display[:, :, 2][ws_bound] = 80
+
+    save_name = '/Users/nicholas/Desktop/original_{}.png'
+    mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+
+    return input_data, segmented_data
 
     # Writes the segmented data to disk. Used for providing segments to the
     #  training gui and when the image is split into multiple parts. Return None
     #  because data will be read from disk later.
-    if write_results:
-        write_to_hdf5(segmnt_block_list, dst_file)
-        return None, None
-    else:
-        return im_block_dict, segmnt_block_list
-
-
-def construct_block_queue(im_block_dict,band_list,size):
-    '''
-    Constructs a multiprocessing queue from a list of image blocks, where
-        each item in the queue is a single block and its list index.
-    '''
-    # Create a multiprocessing Queue
-    block_queue = Queue()
-    # Add each block to the queue with the index (to track block location).
-    for x in range(size):
-        block_queue.put([x,[im_block_dict[band_list[0]][x],
-                            im_block_dict[band_list[1]][x],
-                            im_block_dict[band_list[2]][x]]])
-    return block_queue
-
-
-def process_block_helper(im_block_queue, segmented_blocks,
-                         s_threshold, amp_factor):
-    '''
-    Function run by each thread. Acquires the next block from im_block_queue and
-        gives it to process_block(). Continues until there are no more
-        blocks left in the queue.
-    '''
-    # Read the next item in the queue until the 'STOP' command has been
-    #  reached.
-    for block_num, block in iter(im_block_queue.get, 'STOP'):
-        # Process the next block of data
-        result = watershed_transformation(block, s_threshold, amp_factor)
-        # Write the results to the output queue
-        segmented_blocks.put([block_num,result])
-    # Signal that this process has finished its task
-    segmented_blocks.put(None)
+    # if write_results:
+    #     write_to_hdf5(segmnt_block_list, dst_file)
+    #     return None, None
+    # else:
+    #     return im_block_dict, segmnt_block_list
 
 
 def watershed_transformation(image_data, sobel_threshold, amplification_factor, gauss_sigma, feature_separation):
@@ -222,6 +121,13 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
     if np.amax(image_data[0]) <= 1:
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
+
+    # Find the locations that contain no spectral data
+    #  i.e. pixels that are 0 in all bands
+    empty_pixels = np.zeros(np.shape(image_data[0]), dtype='bool')
+    empty_pixels[(image_data[0] == 0)
+                 & (image_data[1] == 0)
+                 & (image_data[2] == 0)] = True
 
     smooth_im_blue = filters.gaussian(image_data[2],sigma=gauss_sigma,preserve_range=True)
     # smooth_im_blue = image_data[2]
@@ -246,6 +152,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
     sobel_image[:,-1] = 1*255
     sobel_image[0,:] = 1*255
     sobel_image[-1,:] = 1*255
+    sobel_image[empty_pixels] = 1*255
 
     # Set all values in the sobel image that are lower than the
     #   given threshold to zero.
@@ -266,15 +173,9 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
 
     sobel_image = None
 
-    # Find the locations that contain no spectral data
-    #  i.e. pixels that are 0 in all bands
-    empty_pixels = np.zeros(np.shape(image_data[0]), dtype='bool')
-    empty_pixels[(image_data[0] == 0)
-                 & (image_data[1] == 0)
-                 & (image_data[2] == 0)] = True
     # Set all values outside of the image area (empty pixels, usually caused by
     #   orthorectification) to one value, at the end of the watershed list.
-    im_watersheds[empty_pixels] = np.amax(im_watersheds)+1
+    # im_watersheds[empty_pixels] = np.amax(im_watersheds)+1
 
     return im_watersheds
 

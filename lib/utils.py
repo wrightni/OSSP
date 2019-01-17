@@ -253,17 +253,45 @@ def load_tds(file_name, list_name):
         training_feature_matrix.pop(i)
 
     ## Remove the segments labeled "Shadow" (0)
-    x = 0
-    while 5 in label_vector:
-        i = label_vector.index(5)
-        label_vector.pop(i)
-        training_feature_matrix.pop(i)
-        x+=1
+    # x = 0
+    # while 5 in label_vector:
+    #     i = label_vector.index(5)
+    #     label_vector.pop(i)
+    #     training_feature_matrix.pop(i)
+    #     x+=1
 
     # Combine the label vector and training feature matrix into one variable. 
     tds = [label_vector,training_feature_matrix]
 
     return tds
+
+
+def find_blocksize(x_dim, y_dim, desired_size):
+    """
+    Finds the appropriate block size for an input image of a given dimensions.
+    Method returns the first factor of the input dimension that is greater than
+        the desired size.
+    """
+    block_size_x = desired_size
+    block_size_y = desired_size
+
+    # Ensure that chosen block size divides into the image dimension with a remainder that is
+    #   at least half a standard block in width.
+    while (x_dim % block_size_x) <= (block_size_x / 2):
+        block_size_x += 256
+        # Make sure the blocks don't get too big.
+        if block_size_x >= x_dim:
+            block_size_x = x_dim
+            break
+
+    while (y_dim % block_size_y) <= (block_size_y / 2):
+        block_size_y += 256
+        if block_size_y >= y_dim:
+            block_size_y = y_dim
+            break
+
+    return block_size_x, block_size_y
+
 
 #### Save classification results
 def write_to_csv(csv_name, path, image_name, pixel_counts):

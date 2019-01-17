@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 import matplotlib.pyplot as plt
+import time
 
 from lib import utils, debug_tools
 from lib import attribute_calculations as attr_calc
@@ -16,8 +17,7 @@ from lib import create_clsf_raster as ccr
 # tqdm for progress bar
 
 
-def classify_image(input_image, watershed_data, training_dataset, meta_data,
-            threads=1, quality_control=False, verbose=False):
+def classify_image(input_image, watershed_data, training_dataset, meta_data):
     '''
     Run a random forest classification. 
     Input: 
@@ -32,19 +32,20 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     '''
 
     #### Prepare Data and Variables
-    num_blocks = len(input_image[1])
-    num_bands = len(input_image.keys())
+    # num_blocks = len(input_image[1])
+    num_bands = np.shape(input_image)[0]
     image_type = meta_data[0]
     image_date = meta_data[1]
 
     ## Restructure the input data.
     # We are creating a single list where each element of the list is one
     #   block (old: subimage) of the image and is a stack of all bands.  
-    image_data = []    # [block:row:column:band]
-    for blk in range(num_blocks):
-        image_data.append(utils.create_composite(
-                [input_image[b][blk] for b in range(1,num_bands+1)]))
-    input_image = None
+    # image_data = []    # [block:row:column:band]
+    # for blk in range(num_blocks):
+    #     image_data.append(utils.create_composite(
+    #             [input_image[b][blk] for b in range(1,num_bands+1)]))
+    # input_image = None
+    image_data = utils.create_composite([input_image[b] for b in range(num_bands)])
 
     ## Parse training_dataset input
     label_vector = training_dataset[0]
@@ -61,6 +62,10 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data,
     #### Construct the random forest decision tree using the training data set
     rfc = RandomForestClassifier(n_estimators=100)
     rfc.fit(training_feature_matrix, label_vector)
+
+    clsf_block = classify_block(image_data, watershed_data, image_type, image_date, rfc)
+
+    return clsf_block
 
     #### Classify each image block
     # Define multiprocessing-safe queues containing data to process
@@ -167,6 +172,8 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     # Cast data as C int.
     image_block = np.ndarray.astype(image_block, c_int)
     watershed_block = np.ndarray.astype(watershed_block, c_int)
+    print(np.amax(watershed_block))
+    # print(np.shape(image_block))
 
     ## If the block contains no data, set the classification values to 0
     if np.amax(image_block) < 2:
@@ -180,10 +187,14 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     ## Calculate the features of each segment within the block. This 
     #   calculation is unique for each image type. 
     if image_type == 'wv02_ms':
+        start_time = time.clock()
         input_feature_matrix = attr_calc.analyze_ms_image(
-                                image_block, watershed_block)
+                                    image_block, watershed_block)
+        print("MS attr calc time: {}".format(time.clock()-start_time))
     elif image_type == 'srgb':
+        start_time = time.clock()
         input_feature_matrix = attr_calc.analyze_srgb_image(image_block,watershed_block)
+        print("srgb attr calc time: {}".format(time.clock() - start_time))
     elif image_type == 'pan':
         input_feature_matrix = attr_calc.analyze_pan_image(
                                 image_block, watershed_block, image_date)

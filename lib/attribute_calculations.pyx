@@ -1,5 +1,9 @@
+# cython: cdivision=True
+cimport cython
 import numpy as np
 from scipy import stats as spstats
+from cython.parallel import prange
+from libc.stdlib cimport abort, malloc, free
 from ctypes import *
 
 
@@ -100,22 +104,21 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
 
     return feature_matrix
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def analyze_ms_image(input_image, watershed_image, segment_id=False):
     '''
     Cacluate the attributes for each segment given in watershed_image
     using the raw pixel values in input image. Attributes calculated for
     multispectral type WorldView 2 images.
     '''
-    feature_matrix = []
+    # feature_matrix = []
 
     cdef int num_ws
     cdef int x_dim, y_dim, num_bands
     cdef double features[18]
     cdef int ws, b
-    # cdef int histogram_i
-    # cdef int histogram_e
-   
+
     # If no segment id is provided, analyze the features for every watershed
     # in the input image. If a segment id is provided, just analyze the features
     # for that one segment.
@@ -125,6 +128,9 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
         num_ws = int(np.amax(watershed_image) + 1)
     else:
         num_ws = 1
+
+    feature_matrix = np.empty((num_ws,18))
+    cdef double [:, :] fm_view = feature_matrix
 
     x_dim, y_dim, num_bands = np.shape(input_image)
 
@@ -141,35 +147,51 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
 
     for ws in range(num_ws):
         # Check for empty watershed labels
-        if internal[0][ws] == []:
-            features = [0 for _ in range(18)]
-            feature_matrix.append(features)
-            continue
+        # if internal[0][ws] == []:
+        #     features = [0 for _ in range(18)]
+        #     feature_matrix.append(features)
+        #     continue
         # Average Pixel Intensity of each band
         for b in range(8):
-            features[b] = np.average(internal[b][ws])
-            if features[b] < 1:
-                features[b] = 1
+            # features[b] = np.average(internal[b][ws])
+            fm_view[ws,b] = sum(internal[b][ws]) / float(len(internal[b][ws]))
+            # features[b] = sum(internal[b][ws]) / float(len(internal[b][ws]))
+            # features[b] = 0
+            if fm_view[ws,b] < 1:
+                fm_view[ws,b] = 1
+            # if features[b] < 1:
+            #     features[b] = 1
 
         # Important band ratios
-        features[8] = (features[0] / features[2])
-        features[9] = (features[1] / features[6])
-        features[10] = (features[4] / features[6])
-        features[11] = (features[3] / features[5])
-        features[12] = (features[3] / features[6])
-        features[13] = (features[3] / features[7])
-        features[14] = (features[4] / features[6])
+        fm_view[ws, 8] = fm_view[ws, 0] / fm_view[ws, 2]
+        fm_view[ws, 9] = fm_view[ws, 1] / fm_view[ws, 6]
+        fm_view[ws, 10] = fm_view[ws, 4] / fm_view[ws, 6]
+        fm_view[ws, 11] = fm_view[ws, 3] / fm_view[ws, 5]
+        fm_view[ws, 12] = fm_view[ws, 3] / fm_view[ws, 6]
+        fm_view[ws, 13] = fm_view[ws, 3] / fm_view[ws, 7]
+        fm_view[ws, 14] = fm_view[ws, 4] / fm_view[ws, 6]
 
-        # N. Average Intensity 
-        features[15] = np.average(external[4][ws])
+        # features[8] = (features[0] / features[2])
+        # features[9] = (features[1] / features[6])
+        # features[10] = (features[4] / features[6])
+        # features[11] = (features[3] / features[5])
+        # features[12] = (features[3] / features[6])
+        # features[13] = (features[3] / features[7])
+        # features[14] = (features[4] / features[6])
+
+        # N. Average Intensity
+        fm_view[ws, 15] = sum(external[4][ws]) / float(len(external[4][ws]))
+        # features[15] = 0#np.average(external[4][ws])
 
         # b1-b7 / b1+b7
-        features[16] = ((features[0] - features[6]) / (features[0] + features[6]))
+        fm_view[ws, 16] = ((fm_view[ws, 0] - fm_view[ws, 6]) / (fm_view[ws, 0] + fm_view[ws, 6]))
+        # features[16] = ((features[0] - features[6]) / (features[0] + features[6]))
         # b3-b5 / b3+b5
-        features[17] = ((features[2] - features[4]) / (features[2] + features[4]))
+        fm_view[ws, 17] = ((fm_view[ws, 2] - fm_view[ws, 4]) / (fm_view[ws, 2] + fm_view[ws, 4]))
+        # features[17] = ((features[2] - features[4]) / (features[2] + features[4]))
 
-        feature_matrix.append(features)
-
+        # feature_matrix.append(features)
+    feature_matrix = np.copy(fm_view)
     return feature_matrix
 
 
@@ -308,7 +330,8 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
 
     return internal, external
 
-
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def pixel_sort(int[:,:,:] intensity_image_view,
                int[:,:] label_image_view,
                int x_dim, int y_dim, int num_ws, int num_bands):

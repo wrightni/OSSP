@@ -5,7 +5,7 @@ except ImportError:
     from distutils.core import setup
     from distutils.extension import Extension
 
-USE_CYTHON = False
+USE_CYTHON = True
 
 ext = '.pyx' if USE_CYTHON else '.c'
 
