@@ -73,7 +73,6 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     # Cast data as C int.
     image_block = np.ndarray.astype(image_block, c_int)
     watershed_block = np.ndarray.astype(watershed_block, c_int)
-    print(np.amax(watershed_block))
     # print(np.shape(image_block))
 
     ## If the block contains no data, set the classification values to 0
@@ -88,14 +87,10 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     ## Calculate the features of each segment within the block. This 
     #   calculation is unique for each image type. 
     if image_type == 'wv02_ms':
-        start_time = time.clock()
         input_feature_matrix = attr_calc.analyze_ms_image(
                                     image_block, watershed_block)
-        print("MS attr calc time: {}".format(time.clock()-start_time))
     elif image_type == 'srgb':
-        start_time = time.clock()
         input_feature_matrix = attr_calc.analyze_srgb_image(image_block,watershed_block)
-        print("srgb attr calc time: {}".format(time.clock() - start_time))
     elif image_type == 'pan':
         input_feature_matrix = attr_calc.analyze_pan_image(
                                 image_block, watershed_block, image_date)
