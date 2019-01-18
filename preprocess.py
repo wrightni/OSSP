@@ -182,50 +182,6 @@ def prepare_image(input_path, image_name, image_type,
     return bands_output, im_info
 
 
-def find_splitsize(total_cols, total_rows, col_splits, row_splits):
-    """
-    Determines the appropriate x (col) and y (row) dimensions for each
-        image split. Total image size is rounded up to the nearest multiple
-        of 100*#columns. This allows for easier creation of uniform image
-        blocks, but the images will need to be padded with zeros to fit the
-        increased size.
-    """
-    divisor = 100 * col_splits
-    # Image dimension is rounded up (padded) to nearest 100*col_spits
-    cols_pad = math.ceil(float(total_cols) / divisor) * divisor
-    rows_pad = math.ceil(float(total_rows) / divisor) * divisor
-    # Number of columns and rows in each split
-    split_cols = int(cols_pad / col_splits)
-    split_rows = int(rows_pad / row_splits)
-
-    return split_cols, split_rows
-
-
-def find_blocksize_old(x_dim, y_dim, desired_size):
-    """
-    Finds the appropriate block size for an input image of a given dimensions.
-    Method returns the first factor of the input dimension that is greater than
-        the desired size.
-    """
-    # Just in case x_dim and y_dim are smaller than expected
-    if x_dim < desired_size or y_dim < desired_size:
-        block_x = x_dim
-        block_y = y_dim
-
-    factors_x = factor(x_dim)
-    factors_y = factor(y_dim)
-    for x in factors_x:
-        if x >= desired_size:
-            block_x = x
-            break
-    for y in factors_y:
-        if y >= desired_size:
-            block_y = y
-            break
-
-    return int(block_x), int(block_y)
-
-
 def find_blocksize(x_dim, y_dim, desired_size):
     """
     Finds the appropriate block size for an input image of a given dimensions.
@@ -276,24 +232,6 @@ def calc_q_score(image):
     qa_score = float(th) / np.size(image)
 
     return qa_score
-
-
-def factor(number):
-    """
-    Returns a sorted list of all of the factors of number using trial division.
-    source: http://www.calculatorsoup.com/calculators/math/factors.php
-    """
-    factors = []
-    s = int(math.ceil(math.sqrt(number)))
-
-    for i in range(1, s):
-        c = float(number) / i
-        if int(c) == c:
-            factors.append(c)
-            factors.append(number / c)
-    factors.sort()
-
-    return factors
 
 
 def parse_metadata(metadata, image_type):
@@ -512,78 +450,157 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     return lower, upper
 
 
-def split_band(band, num_x, num_y, size_x, size_y):
+def rescale_band(band, bottom, top):
     """
-    Divides the input band into a list of num_x*num_y subregions (splits), each
-        of size defined by size_x and size_y
+    Rescale and image data from range [bottom,top] to uint8 ([0,255])
     """
-    # Pad the input band with zeros to fit with the desired number and size of
-    #   image splits. 
-    padded_band = np.zeros([num_y * size_y, num_x * size_x])
-    original_dims = np.shape(band)
-    padded_band[0:original_dims[0], 0:original_dims[1]] = band
-    band = None
+    # Record pixels that contain no spectral information, indicated by a value of 0
+    empty_pixels = np.zeros(np.shape(band), dtype='bool')
+    empty_pixels[band == 0] = True
 
-    # Create a list of image splits
-    all_splits = []
-    for y in range(num_y):
-        for x in range(num_x):
-            split = padded_band[y * size_y:(y + 1) * size_y, x * size_x:(x + 1) * size_x]
-            all_splits.append(split)
+    # Rescale the data to use the full int8 (0,255) pixel value range.
+    # Check the band where the values of the matrix are greater than zero so that the
+    # percentages ignore empty pixels.
+    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
+                                                out_range=(1, 255))
+    new_band = np.array(stretched_band, dtype=np.uint8)
+    # Set the empty pixel areas back to a value of 0.
+    new_band[empty_pixels] = 0
 
-    return all_splits
-
-
-def construct_blocks(image, block_cols, block_rows, pad_dim):
-    """
-    Creates a list of image blocks based on an input raster and desired block
-        size.
-    Block size needs to be a multiple of total raster dimensions.
-    """
-    # Pad the input band with zeros to fit with the desired number and size of
-    #   image splits. 
-    padded_image = np.zeros(pad_dim)
-    original_dim = np.shape(image)
-    padded_image[0:original_dim[0], 0:original_dim[1]] = image
-    image = None
-
-    num_block_cols = int(pad_dim[1] / block_cols)
-    num_block_rows = int(pad_dim[0] / block_rows)
-
-    block_list = []
-    # Append a 2d array of the image block to
-    pad_amt = 100
-    for y in range(num_block_rows):
-        for x in range(num_block_cols):
-            block_list.append(padded_image[(y * block_rows) : ((y + 1) * block_rows),
-                                           (x * block_cols) : ((x + 1) * block_cols)])
-    dimensions = [num_block_cols, num_block_rows]
-    return block_list, dimensions
+    return new_band
 
 
-def write_to_hdf5(dst_file, image_data, band_num, image_type, image_date,
-                  dimensions):
-    """
-    Writes the given image data to an hdf5 file.
-    """
-    # If the output file already exists, append the given data to that
-    #   file. Otherwise, create a new file and add the attribute headers. 
-    if os.path.isfile(dst_file):
-        outfile = h5py.File(dst_file, "r+")
-    else:
-        outfile = h5py.File(dst_file, "w")
-        outfile.attrs.create("Image Type", image_type)
-        outfile.attrs.create("Image Date", image_date)
-        outfile.attrs.create("Block Dimensions", dimensions)
-    # Catch collisions with existing datasets. If this dataset already exists,
-    #   do nothing.
-    try:
-        outfile.create_dataset('original_' + str(band_num), data=image_data,
-                               dtype='uint8', compression='gzip')
-    except RuntimeError:
-        pass
+# def find_splitsize(total_cols, total_rows, col_splits, row_splits):
+#     """
+#     Determines the appropriate x (col) and y (row) dimensions for each
+#         image split. Total image size is rounded up to the nearest multiple
+#         of 100*#columns. This allows for easier creation of uniform image
+#         blocks, but the images will need to be padded with zeros to fit the
+#         increased size.
+#     """
+#     divisor = 100 * col_splits
+#     # Image dimension is rounded up (padded) to nearest 100*col_spits
+#     cols_pad = math.ceil(float(total_cols) / divisor) * divisor
+#     rows_pad = math.ceil(float(total_rows) / divisor) * divisor
+#     # Number of columns and rows in each split
+#     split_cols = int(cols_pad / col_splits)
+#     split_rows = int(rows_pad / row_splits)
+#
+#     return split_cols, split_rows
+# def find_blocksize_old(x_dim, y_dim, desired_size):
+#     """
+#     Finds the appropriate block size for an input image of a given dimensions.
+#     Method returns the first factor of the input dimension that is greater than
+#         the desired size.
+#     """
+#     # Just in case x_dim and y_dim are smaller than expected
+#     if x_dim < desired_size or y_dim < desired_size:
+#         block_x = x_dim
+#         block_y = y_dim
+#
+#     factors_x = factor(x_dim)
+#     factors_y = factor(y_dim)
+#     for x in factors_x:
+#         if x >= desired_size:
+#             block_x = x
+#             break
+#     for y in factors_y:
+#         if y >= desired_size:
+#             block_y = y
+#             break
+#
+#     return int(block_x), int(block_y)
+#
+#
+# def factor(number):
+#     """
+#     Returns a sorted list of all of the factors of number using trial division.
+#     source: http://www.calculatorsoup.com/calculators/math/factors.php
+#     """
+#     factors = []
+#     s = int(math.ceil(math.sqrt(number)))
+#
+#     for i in range(1, s):
+#         c = float(number) / i
+#         if int(c) == c:
+#             factors.append(c)
+#             factors.append(number / c)
+#     factors.sort()
+#
+#     return factors
 
-    outfile.close()
+# def split_band(band, num_x, num_y, size_x, size_y):
+#     """
+#     Divides the input band into a list of num_x*num_y subregions (splits), each
+#         of size defined by size_x and size_y
+#     """
+#     # Pad the input band with zeros to fit with the desired number and size of
+#     #   image splits.
+#     padded_band = np.zeros([num_y * size_y, num_x * size_x])
+#     original_dims = np.shape(band)
+#     padded_band[0:original_dims[0], 0:original_dims[1]] = band
+#     band = None
+#
+#     # Create a list of image splits
+#     all_splits = []
+#     for y in range(num_y):
+#         for x in range(num_x):
+#             split = padded_band[y * size_y:(y + 1) * size_y, x * size_x:(x + 1) * size_x]
+#             all_splits.append(split)
+#
+#     return all_splits
+
+
+# def construct_blocks(image, block_cols, block_rows, pad_dim):
+#     """
+#     Creates a list of image blocks based on an input raster and desired block
+#         size.
+#     Block size needs to be a multiple of total raster dimensions.
+#     """
+#     # Pad the input band with zeros to fit with the desired number and size of
+#     #   image splits.
+#     padded_image = np.zeros(pad_dim)
+#     original_dim = np.shape(image)
+#     padded_image[0:original_dim[0], 0:original_dim[1]] = image
+#     image = None
+#
+#     num_block_cols = int(pad_dim[1] / block_cols)
+#     num_block_rows = int(pad_dim[0] / block_rows)
+#
+#     block_list = []
+#     # Append a 2d array of the image block to
+#     pad_amt = 100
+#     for y in range(num_block_rows):
+#         for x in range(num_block_cols):
+#             block_list.append(padded_image[(y * block_rows) : ((y + 1) * block_rows),
+#                                            (x * block_cols) : ((x + 1) * block_cols)])
+#     dimensions = [num_block_cols, num_block_rows]
+#     return block_list, dimensions
+
+
+# def write_to_hdf5(dst_file, image_data, band_num, image_type, image_date,
+#                   dimensions):
+#     """
+#     Writes the given image data to an hdf5 file.
+#     """
+#     # If the output file already exists, append the given data to that
+#     #   file. Otherwise, create a new file and add the attribute headers.
+#     if os.path.isfile(dst_file):
+#         outfile = h5py.File(dst_file, "r+")
+#     else:
+#         outfile = h5py.File(dst_file, "w")
+#         outfile.attrs.create("Image Type", image_type)
+#         outfile.attrs.create("Image Date", image_date)
+#         outfile.attrs.create("Block Dimensions", dimensions)
+#     # Catch collisions with existing datasets. If this dataset already exists,
+#     #   do nothing.
+#     try:
+#         outfile.create_dataset('original_' + str(band_num), data=image_data,
+#                                dtype='uint8', compression='gzip')
+#     except RuntimeError:
+#         pass
+#
+#     outfile.close()
 
 
 def save_color_image(image_data, output_name, image_type, block_cols, block_rows):
@@ -610,26 +627,6 @@ def save_color_image(image_data, output_name, image_type, block_cols, block_rows
     colorfullimg = utils.compile_subimages(holder, block_cols, block_rows, 3)
     mimg.imsave(output_name, colorfullimg)
     colorfullimg = None
-
-
-def rescale_band(band, bottom, top):
-    """
-    Rescale and image data from range [bottom,top] to uint8 ([0,255])
-    """
-    # Record pixels that contain no spectral information, indicated by a value of 0
-    empty_pixels = np.zeros(np.shape(band), dtype='bool')
-    empty_pixels[band == 0] = True
-
-    # Rescale the data to use the full int8 (0,255) pixel value range.
-    # Check the band where the values of the matrix are greater than zero so that the
-    # percentages ignore empty pixels.
-    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
-                                                out_range=(1, 255))
-    new_band = np.array(stretched_band, dtype=np.uint8)
-    # Set the empty pixel areas back to a value of 0. 
-    new_band[empty_pixels] = 0
-
-    return new_band
 
 
 def downsample(band, factor):

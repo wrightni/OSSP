@@ -308,8 +308,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
 
     return internal, external
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 def pixel_sort(int[:,:,:] intensity_image_view,
                int[:,:] label_image_view,
                int x_dim, int y_dim, int num_ws, int num_bands):

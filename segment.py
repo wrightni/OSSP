@@ -129,12 +129,12 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
                  & (image_data[1] == 0)
                  & (image_data[2] == 0)] = True
 
+    # Apply a smoothing filter to remove noise and improve segmentation
     smooth_im_blue = filters.gaussian(image_data[2],sigma=gauss_sigma,preserve_range=True)
-    # smooth_im_blue = image_data[2]
     smooth_im_red = filters.gaussian(image_data[0],sigma=gauss_sigma,preserve_range=True)
-    # smooth_im_red = image_data[0]
+
     # Create a gradient image using a sobel filter
-    sobel_image_blue = filters.scharr(smooth_im_blue)#image_data[2])
+    sobel_image_blue = filters.scharr(smooth_im_blue)
     sobel_image_red = filters.scharr(smooth_im_red)
 
     sobel_image = sobel_image_blue + np.abs(sobel_image_blue-sobel_image_red)
@@ -169,8 +169,8 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
     # Build a watershed from the markers on top of the edge image
     im_watersheds = morphology.watershed(sobel_image,markers)
     im_watersheds = np.array(im_watersheds,dtype='uint32')
-    # Clear gradient image data
 
+    # Clear gradient image data
     sobel_image = None
 
     # Set all values outside of the image area (empty pixels, usually caused by

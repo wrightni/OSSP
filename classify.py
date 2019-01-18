@@ -67,105 +67,6 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data):
 
     return clsf_block
 
-    #### Classify each image block
-    # Define multiprocessing-safe queues containing data to process
-    clsf_block_queue = Queue()
-    num_blocks = len(watershed_data)
-    im_block_queue = construct_block_queue(image_data, watershed_data, num_blocks)
-
-    # Define the number of threads to create
-    NUMBER_OF_PROCESSES = threads
-    block_procs = [Process(target=process_block_helper,
-                           args=(im_block_queue, clsf_block_queue, image_type, 
-                                 image_date, rfc))
-                   for _ in range(NUMBER_OF_PROCESSES)]
-
-    # Start the worker processes. 
-    for proc in block_procs:
-        # Add a stop command to the end of the queue for each of the 
-        #   processes started. This will signal for the process to stop. 
-        im_block_queue.put('STOP')
-        # Start the process
-        proc.start()
-
-    # Display a progress bar
-    if verbose:
-        try:
-            from tqdm import tqdm
-        except ImportError:
-            print "Install tqdm to display progress bar."
-            verbose = False
-        else:
-            pbar = tqdm(total=num_blocks, unit='block')
-
-    # Each process adds the classification results to clsf_block_queue, when it 
-    #   finishes a row. Adds 'None' when there are not more rows left 
-    #   in the queue. 
-    # This loop continues as long as all of the processes have not finished
-    #   (i.e. fewer than NUMBER_OF_PROCESSES have returned None). When a row is 
-    #   added to the queue, the tqdm progress bar updates.
-
-    # Initialize the output dataset as an empty list of length = input dataset
-    #   This needs to be initialized since blocks will be added non-sequentially
-    clsf_block_list = [None for _ in range(num_blocks)]
-    finished_threads = 0
-    while finished_threads < NUMBER_OF_PROCESSES:
-        if not clsf_block_queue.empty():
-            val = clsf_block_queue.get()
-            if val == None:
-                finished_threads += 1
-            else:
-                block_num = val[0]
-                segmnt_data = val[1]
-                clsf_block_list[block_num] = segmnt_data
-                if verbose: pbar.update()
-
-    # Close the progress bar
-    if verbose: 
-        pbar.close()
-        print "Finished Processing. Closing threads..."
-
-    # Join all of the processes back together
-    for proc in block_procs:
-        proc.join()
-
-    return clsf_block_list
-
-
-def construct_block_queue(image_block_list, watershed_block_list, size):
-    '''
-    Constructs a multiprocessing queue that contains all of the data needed to
-        classify a single block of image data.
-    Each item in the queue contains the original image data and the segmented
-        image. 
-    '''
-    # Create a multiprocessing Queue
-    block_queue = Queue()
-    # Add each block to the queue with the index (to track block location).
-    for x in range(size):
-        block_queue.put([x,image_block_list[x], watershed_block_list[x]])
-    return block_queue
-
-def process_block_helper(im_block_queue, clsf_block_queue, image_type, 
-                         image_date, rfc):
-    '''
-    Function run by each thread. Acquires the next block from the queue and
-        gives it to process_block(). Continues until there are no more 
-        blocks left in the queue. 
-    '''
-    # Read the next item in the queue until the 'STOP' command has been
-    #  reached. 
-    for block_num, im_block, ws_block in iter(im_block_queue.get, 'STOP'):
-        # Process the next block of data
-        result = classify_block(im_block, ws_block, image_type, image_date, rfc)
-        # Write the results to the output queue
-        clsf_block_queue.put([block_num,result])
-
-        # debug_tools.display_image(im_block,result,2)
-        # time.sleep(10)
-    # Signal that this process has finished its task
-    clsf_block_queue.put(None)
-
 
 def classify_block(image_block, watershed_block, image_type, image_date, rfc):
 
@@ -204,7 +105,8 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     # Predict the classification of each segment
     ws_predictions = rfc.predict(input_feature_matrix)
     ws_predictions = np.ndarray.astype(ws_predictions,dtype=c_int)
-    # Create the classified image by replacing watershed id's with 
+
+    # Create the classified image by replacing watershed id's with
     #   classification values.
     # If there is more than one band, we have to select one (using 2 for 
     #   no particular reason).

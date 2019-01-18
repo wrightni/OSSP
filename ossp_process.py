@@ -27,17 +27,13 @@ def main():
                         help="name of training classification list")
     parser.add_argument("-o", "--output_dir", type=str, default="default",
                         help="directory to place output results.")
-    parser.add_argument("-s", "--splits", metavar='int', type=int, default=1,
-                        help="number of subdividing splits to preform on raw image")
-    parser.add_argument("-p", "--parallel", metavar='int', type=int, default=1,
-                        help='''number of processing threads to create.''')
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="display text information and progress")
-    parser.add_argument("-e", "--extended_output", action="store_true",
-                        help='''Save additional data:
-                                    1) classified image (png)
-                                    2) classified results (csv)
-                        ''')
+    # parser.add_argument("-e", "--extended_output", action="store_true",
+    #                     help='''Save additional data:
+    #                                 1) classified image (png)
+    #                                 2) classified results (csv)
+    #                     ''')
     parser.add_argument("-c", "--nostretch", action="store_false",
                         help="Do not apply a histogram stretch image correction to input.")
 
@@ -67,7 +63,7 @@ def main():
     dst_dir = args.output_dir
 
     verbose = args.verbose
-    extended_output = args.extended_output
+    # extended_output = args.extended_output
     stretch = args.nostretch
 
     # For Ames OIB Processing:
@@ -112,7 +108,7 @@ def main():
                 print("Loading image...")
             src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
         else:
-            print "File not found: {}".format(full_image_name)
+            print("File not found: {}".format(full_image_name))
             continue
 
         # Read metadata to get image
