@@ -13,7 +13,6 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 
 ## Dependencies
 
-* Python 2.7
 * gdal (v2.0 or above)
 * numpy
 * scipy
@@ -25,6 +24,7 @@ The Anaconda distribution of Python is recommended, but any distribution with th
 
 #### Optional
 * tqdm (for progress bar)
+* PGC imagery_utils (for WV pansharpening)
 
 ## Usage
 
@@ -36,7 +36,7 @@ The first step is to run the setup.py script to compile C libraries. Run __pytho
 
 ### ossp_process.py
 
-This combines all steps of the image classification scheme into one script and should be the primary script to use. If given a folder of images, this script finds all appropriately formatted files directory (.tif(f) and .jpg) and queues them for processing. If given an image file, this script processing that single image alone. For an image, this script processes them as follows: Image subdivision (if chosen) and preprocessing (preprocess) -> segmentation (segment.py) -> classification (classify.py) -> calculate statistics -> recompile image subdivisions (if present). ossp\_process.py is able to process several image subdivisions concurrently by creating multiple threads. Use the --parallel option to select the number of threads to create.
+This combines all steps of the image classification scheme into one script and should be the primary script to use. If given a folder of images, this script finds all appropriately formatted files directory (.tif(f) and .jpg) and queues them for processing. If given an image file, this script processes that single image alone. This script processes images as follows: Image preprocessing (histogram stretch or pansharpening if chosen) -> segmentation (segment.py) -> classification (classify.py) -> calculate statistics.
 
 #### Required Arguments
 * __input directory__: directory containing all of the images you wish to process Note that all .jpg and .tif images in the input directory as well as all sub-directories of it will be processed. Can also provide the path and filename to a single image to process only that image.
@@ -50,41 +50,20 @@ This combines all steps of the image classification scheme into one script and s
 
 * __-o | --output_dir__: Directory to write output files. 
 * __-v | --verbose__: Display text output as algorithm progresses. 
-* __-e | --extended\_output__: Option to include extra output to be written to disk. A .png of the classified image, a .csv of the results, and a .h5 containing the image segments will be written. The .h5 is used for training set creation.
-* __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 1*.
-* __-p | --parallel__: The number of parallel processes to run (i.e. threads to create). *Default = 1*.
+* __-c | --stretch__: {'hist', 'pansh', 'none'}: Apply an image correction prior to classification. Pansharpening / orthorectification option requires PGC scripts. *Default = hist*.
+* __--pgc_script__: Path for the PGC imagery_utils folder if 'pansh' was chosen for the image correction.
 * __--training\_label__: The label of a custom training dataset. See advanced section for details. *Default = image\_type*.
 
 #### Notes:
 
-Example: ossp\_process.py input\_dir im\_type training\_dataset\_file -s 4 -p 2
+Example: ossp\_process.py input\_dir im\_type training\_dataset\_file -v
 
-This example will process all .tif and .jpg files in the input directory, using the training data found in training\_dataset\_file using two processors, and splitting the image into four sections
-
-In general, images should be divided into parts small enough to easily load into RAM. This depends strongly on the computer running these scripts. Segments should typically not exceed 1 or 2gb in size for best results. For ~10mb sRGB images subdivision is not required (use –s 1 as the optional argument). For a full multispectral WorldView scene, which may be 16gb or larger, 9 or 16 segments are typically needed.
-
-
-### preprocess.py
-
-This script reads in a raw image, stretches the pixel intensity values to the full 8-bit range, and subdivides the image into _s_ number of subimages. The output file is in hdf5 format, and is ready to be ready by segment.py. 
-
-#### Positional Arguments
-* __input_dir__: Directory path of the input image
-* __filename__: Name of the image to be split
-* __image type__: {‘srgb’, ‘wv02_ms’, ‘pan'}: the type of imagery you are processing. 
-  1. 'srgb': RGB imagery taken by a typical camera
-  2. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
-  3. 'pan': High resolution panchromatic imagery
-
-#### Optional Arguments
-* __--output_dir__: Directory path for output images.
-* __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
-* __-v | --verbose__: Display text information and progress of the script.
+This example will process all .tif and .jpg files in the input directory.
 
 
 ### segment.py
 
-This script loads the output of preprocess.py, and segments the image using an edge detection followed by watershed segmentation.
+This script segments the image using an edge detection followed by watershed segmentation.
 
 #### Positional Arguments
 * __input_dir__: Directory path of the input image.
@@ -126,6 +105,7 @@ Classified the segmented image (output of segment.py) using a Random Forest mach
 #### Optional arguments:
 * __--tds_file__: Only used for mode 1. Existing training dataset file. Will create a new one with this name if none exists. *Default = <image_type>\_training\_data.h5*.
 * __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
+
 
 ### Contact
 Nicholas Wright
