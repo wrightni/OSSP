@@ -9,7 +9,7 @@ import argparse
 import os
 import math
 import datetime
-import h5py
+import subprocess
 import numpy as np
 import matplotlib.image as mimg
 from skimage import exposure
@@ -180,6 +180,50 @@ def prepare_image(input_path, image_name, image_type,
 
     # If number_of_splits is more than 1, bands_output will be empty
     return bands_output, im_info
+
+
+def rescale_band(band, bottom, top):
+    """
+    Rescale and image data from range [bottom,top] to uint8 ([0,255])
+    """
+    # Record pixels that contain no spectral information, indicated by a value of 0
+    empty_pixels = np.zeros(np.shape(band), dtype='bool')
+    empty_pixels[band == 0] = True
+
+    # Rescale the data to use the full int8 (0,255) pixel value range.
+    # Check the band where the values of the matrix are greater than zero so that the
+    # percentages ignore empty pixels.
+    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
+                                                out_range=(1, 255))
+    new_band = np.array(stretched_band, dtype=np.uint8)
+    # Set the empty pixel areas back to a value of 0.
+    new_band[empty_pixels] = 0
+
+    return new_band
+
+
+def run_pgc_pansharpen(script_path, input_filepath, output_dir):
+
+    base_cmd = os.path.join(script_path, 'pgc_pansharpen.py')
+
+    cmd = 'python {} --epsg 3413 -c rf -t Byte --resample cubic {} {}'.format(
+        base_cmd,
+        input_filepath,
+        output_dir)
+
+    print(cmd)
+
+    # Spawn a subprocess to execute the above command
+    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    proc.wait()
+
+    # Copying PGC Naming convention, written to match above command
+    basename = os.path.splitext(os.path.split(input_filepath)[-1])[0]
+    pansh_filename = "{}_{}{}{}_pansh.tif".format(basename, 'u08', 'rf', '3413')
+
+    return pansh_filename
 
 
 def find_blocksize(x_dim, y_dim, desired_size):
@@ -450,24 +494,7 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     return lower, upper
 
 
-def rescale_band(band, bottom, top):
-    """
-    Rescale and image data from range [bottom,top] to uint8 ([0,255])
-    """
-    # Record pixels that contain no spectral information, indicated by a value of 0
-    empty_pixels = np.zeros(np.shape(band), dtype='bool')
-    empty_pixels[band == 0] = True
 
-    # Rescale the data to use the full int8 (0,255) pixel value range.
-    # Check the band where the values of the matrix are greater than zero so that the
-    # percentages ignore empty pixels.
-    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
-                                                out_range=(1, 255))
-    new_band = np.array(stretched_band, dtype=np.uint8)
-    # Set the empty pixel areas back to a value of 0.
-    new_band[empty_pixels] = 0
-
-    return new_band
 
 
 # def find_splitsize(total_cols, total_rows, col_splits, row_splits):

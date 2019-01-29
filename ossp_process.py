@@ -29,13 +29,21 @@ def main():
                         help="directory to place output results.")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="display text information and progress")
+    parser.add_argument("-c", "--stretch",
+                        type=str,
+                        choices=["hist", "pansh", "none"],
+                        default='hist',
+                        help='''Apply image correction/stretch to input:
+                             hist: Histogram stretch
+                             pansh: Orthorectify / Pansharpen for MS WV images
+                             none: No correction''')
+    parser.add_argument("--pgc_script", type=str, default=None,
+                        help="Path for the pansharpening script if needed")
     # parser.add_argument("-e", "--extended_output", action="store_true",
     #                     help='''Save additional data:
     #                                 1) classified image (png)
     #                                 2) classified results (csv)
     #                     ''')
-    parser.add_argument("-c", "--nostretch", action="store_false",
-                        help="Do not apply a histogram stretch image correction to input.")
 
     # Parse Arguments
     args = parser.parse_args()
@@ -63,8 +71,15 @@ def main():
     dst_dir = args.output_dir
 
     verbose = args.verbose
-    # extended_output = args.extended_output
-    stretch = args.nostretch
+    stretch = args.stretch
+
+    # Use the given pansh script path, otherwise search for the correct folder
+    #   in the same directory as this script.
+    if args.pgc_script:
+        pansh_script_path = args.pgc_script
+    else:
+        current_path = os.path.dirname(os.path.realpath(__file__))
+        pansh_script_path = os.path.join(os.path.split(current_path)[0], 'imagery_utils')
 
     # For Ames OIB Processing:
     if image_type == 'srgb':
@@ -101,8 +116,24 @@ def main():
         if not os.path.isdir(task.get_dst_dir()):
             os.makedirs(task.get_dst_dir())
 
+        # Run Ortho/Pan scripts if necessary
+        if stretch == 'pansh':
+            if verbose:
+                print("Orthorectifying and Pansharpening image...")
+
+            full_image_name = os.path.join(task.get_src_dir(), task.get_id())
+            pansh_filepath = pp.run_pgc_pansharpen(pansh_script_path,
+                                                   full_image_name,
+                                                   task.get_dst_dir())
+
+            # Set the image name/dir to the pan output name/dir
+            task.set_src_dir(task.get_dst_dir())
+            task.change_id(pansh_filepath)
+            lower = 1
+            upper = 255
+
         # Open the image dataset with gdal
-        full_image_name = os.path.join(src_dir, task.get_id())
+        full_image_name = os.path.join(task.get_src_dir(), task.get_id())
         if os.path.isfile(full_image_name):
             if verbose:
                 print("Loading image...")
@@ -121,15 +152,17 @@ def main():
         desired_block_size = 6400
 
         # Analyze input image histogram (if applying correction)
-        if stretch:
+        if stretch == 'hist':
             lower, upper = pp.histogram_threshold(src_ds, image_type)
-        elif image_type == 'wv02_ms' or image_type == 'pan':
-            lower = 1
-            upper = 2047
-        # Can assume srgb images are already 8bit
-        else:
-            lower = 1
-            upper = 255
+        elif stretch == 'none':
+            # Maybe guess this from the input dataset instead of assuming?
+            if image_type == 'wv02_ms' or image_type == 'pan':
+                lower = 1
+                upper = 2047
+            # Can assume srgb images are already 8bit
+            else:
+                lower = 1
+                upper = 255
 
         # Create a blank output image dataset
         # Save the classified image output as a geotiff
