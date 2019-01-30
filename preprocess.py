@@ -211,8 +211,6 @@ def run_pgc_pansharpen(script_path, input_filepath, output_dir):
         input_filepath,
         output_dir)
 
-    print(cmd)
-
     # Spawn a subprocess to execute the above command
     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
