@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.image as mimg
+import glob
 from ctypes import *
 
 
@@ -105,6 +106,49 @@ def create_task_list(src_dir, dst_dir):
                     continue
 
             task_list.append(task)
+
+    return task_list
+
+
+def create_task_list_db(db_filepath):
+    '''
+    -----> Only selecting p002 for now, update this to process all parts!
+    Creates a task list from the given database. Variables are specific
+    to a custom implementation of a database and directory structure.
+    '''
+    base_dir = '/media/sequoia/DigitalGlobe/imagery'
+    out_dir = '/media/sequoia/DigitalGlobe/processed'
+    task_list = []
+
+    # Open the database
+    conn = sqlite3.connect(db_filepath)
+
+    # Select the images that need to be processed with a database query
+    cursor = conn.execute("SELECT NAME FROM DigitalGlobe WHERE CLOUD = 1 \
+                                                            AND SENSOR = 'Pan_MS1_MS2' \
+                                                            AND LOCAL = 1 \
+                                                            AND PART IS NULL")
+    for row in cursor:
+        image_id = row[0]
+
+        # Return a list of all MS .ntf files that match the image id
+        # -----> Only selecting p002 for now, update this to process all parts!
+        image_list = glob.glob('{}/*{}*M1BS*P002.ntf'.format(base_dir, image_id))
+
+        for image in image_list:
+            # Just in case there are any hidden files
+            if image[0] == '.':
+                continue
+
+            image_name = os.path.split(image)[-1]
+            # Add this image to the task list
+            new_task = Task(image_name, base_dir)
+            new_task.set_dst_dir(out_dir)
+
+            task_list.append(new_task)
+
+    # Close the database
+    conn.close()
 
     return task_list
 
@@ -232,7 +276,8 @@ def write_to_csv(csv_name, path, image_name, pixel_counts):
         print "error saving csv"
         print pixel_counts
 
-def write_to_database(db_name, path, image_id, part, pixel_counts):
+
+def write_to_database(db_filepath, image_id, part, pixel_counts):
     '''
     INPUT:
         db_name: filename of the database
@@ -248,28 +293,37 @@ def write_to_database(db_name, path, image_id, part, pixel_counts):
             data to that, record which parts contributed to the total.
 
     '''
+
+    #part_num = os.path.splitext(image_name)[0].split('_')[-1]
+
     # Convert pixel_counts into percentages and total area
-    area = 1  #Prevent division by 0
+    area = 1  # Prevent division by 0
     for i in range(len(pixel_counts)):
         area +=  pixel_counts[i]
-    percentages = []
+    prcnt = []
     for i in range(len(pixel_counts)):
-        percentages.append(float(pixel_counts[i]/area))
+        prcnt.append(float(pixel_counts[i] / area))
+
+    # Convert area to square kilometers
+    # --> Get the pixel size from image metadata before implementing this conversion
+    # area = int((area * 0.25) / 1000000)
+
     # Open the database
-    conn = sqlite3.connect(os.path.join(path,db_name))
+    conn = sqlite3.connect(db_filepath)
 
     # Update the entry at image_id with the given pixel counts
     conn.execute("UPDATE DigitalGlobe \
                  SET AREA = {0:d}, SNOW = {1:f}, GRAY = {2:f}, MP = {3:f}, \
                      OW = {4:f}, PART = {5:s} \
                  WHERE NAME = '{6:s}' \
-                ".format(int(area), percentages[0], percentages[1], 
-                         percentages[2], percentages[3], part, image_id)
+                ".format(int(area), prcnt[0], prcnt[1],
+                         prcnt[2]+prcnt[3], prcnt[4], part, image_id)
                 )
     # Commit the changes
     conn.commit()
     # Close the database
     conn.close()
+
 
 #### Recombine classified image splits
 def stitch(image_files, save_path=None):

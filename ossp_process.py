@@ -261,10 +261,17 @@ def main():
             writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water"])
             writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3]])
 
-        # # Save color image for viewing
-        # if extended_output:
-        #     utils.save_color(classified_image,
-        #                      os.path.join(dst_dir, image_name + '.png'))
+
+        # Writing the results to a sqlite database. (Only works for
+        #   a specific database structure that has already been created)
+        db_name = 'ImageDatabase.db'
+        db_dir = '/media/sequoia/DigitalGlobe/'
+        image_name = task.get_id()
+        image_name = os.path.splitext(image_name)[0]
+        image_id = image_name.split('_')[2]
+        part = image_name.split('_')[5]
+        utils.write_to_database(db_name, db_dir, image_id, part, pixel_counts)
+
 
         # Close the progress bar
         if verbose:
