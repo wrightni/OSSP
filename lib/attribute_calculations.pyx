@@ -342,6 +342,9 @@ def pixel_sort(int[:,:,:] intensity_image_view,
 
     for y in range(y_dim):
         for x in range(x_dim):
+            # Ignore pixels whose value is 0 (no data)
+            if intensity_image_view[x,y][0] == 0:
+                continue
             # Set the current segment number
             sn = label_image_view[x,y]
             # Assign the internal pixel

@@ -7219,7 +7219,7 @@ __pyx_t_24 = __pyx_v_b;
  * 
  *     return internal, external             # <<<<<<<<<<<<<<
  * 
- * @cython.boundscheck(False)
+ * 
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 309, __pyx_L1_error)
@@ -7260,9 +7260,9 @@ __pyx_t_24 = __pyx_v_b;
   return __pyx_r;
 }
 
-/* "lib/attribute_calculations.pyx":313
- * @cython.boundscheck(False)
- * @cython.wraparound(False)
+/* "lib/attribute_calculations.pyx":312
+ * 
+ * 
  * def pixel_sort(int[:,:,:] intensity_image_view,             # <<<<<<<<<<<<<<
  *                int[:,:] label_image_view,
  *                int x_dim, int y_dim, int num_ws, int num_bands):
@@ -7313,35 +7313,35 @@ static PyObject *__pyx_pw_3lib_22attribute_calculations_9pixel_sort(PyObject *__
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_label_image_view)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 1); __PYX_ERR(0, 313, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 1); __PYX_ERR(0, 312, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x_dim)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 2); __PYX_ERR(0, 313, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 2); __PYX_ERR(0, 312, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_y_dim)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 3); __PYX_ERR(0, 313, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 3); __PYX_ERR(0, 312, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_num_ws)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 4); __PYX_ERR(0, 313, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 4); __PYX_ERR(0, 312, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
         if (likely((values[5] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_num_bands)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 5); __PYX_ERR(0, 313, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, 5); __PYX_ERR(0, 312, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "pixel_sort") < 0)) __PYX_ERR(0, 313, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "pixel_sort") < 0)) __PYX_ERR(0, 312, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 6) {
       goto __pyx_L5_argtuple_error;
@@ -7353,16 +7353,16 @@ static PyObject *__pyx_pw_3lib_22attribute_calculations_9pixel_sort(PyObject *__
       values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
       values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
     }
-    __pyx_v_intensity_image_view = __Pyx_PyObject_to_MemoryviewSlice_dsdsds_int(values[0]); if (unlikely(!__pyx_v_intensity_image_view.memview)) __PYX_ERR(0, 313, __pyx_L3_error)
-    __pyx_v_label_image_view = __Pyx_PyObject_to_MemoryviewSlice_dsds_int(values[1]); if (unlikely(!__pyx_v_label_image_view.memview)) __PYX_ERR(0, 314, __pyx_L3_error)
-    __pyx_v_x_dim = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_x_dim == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 315, __pyx_L3_error)
-    __pyx_v_y_dim = __Pyx_PyInt_As_int(values[3]); if (unlikely((__pyx_v_y_dim == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 315, __pyx_L3_error)
-    __pyx_v_num_ws = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_num_ws == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 315, __pyx_L3_error)
-    __pyx_v_num_bands = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_num_bands == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 315, __pyx_L3_error)
+    __pyx_v_intensity_image_view = __Pyx_PyObject_to_MemoryviewSlice_dsdsds_int(values[0]); if (unlikely(!__pyx_v_intensity_image_view.memview)) __PYX_ERR(0, 312, __pyx_L3_error)
+    __pyx_v_label_image_view = __Pyx_PyObject_to_MemoryviewSlice_dsds_int(values[1]); if (unlikely(!__pyx_v_label_image_view.memview)) __PYX_ERR(0, 313, __pyx_L3_error)
+    __pyx_v_x_dim = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_x_dim == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 314, __pyx_L3_error)
+    __pyx_v_y_dim = __Pyx_PyInt_As_int(values[3]); if (unlikely((__pyx_v_y_dim == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 314, __pyx_L3_error)
+    __pyx_v_num_ws = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_num_ws == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 314, __pyx_L3_error)
+    __pyx_v_num_bands = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_num_bands == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 314, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 313, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("pixel_sort", 1, 6, 6, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 312, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("lib.attribute_calculations.pixel_sort", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7396,30 +7396,59 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_8pixel_sort(CYTHON_UNUSE
   int __pyx_t_6;
   PyObject *__pyx_t_7 = NULL;
   int __pyx_t_8[4];
-  Py_ssize_t __pyx_t_9;
+  __Pyx_memviewslice __pyx_t_9 = { 0, 0, { 0 }, { 0 }, { 0 } };
   Py_ssize_t __pyx_t_10;
   int __pyx_t_11;
-  int __pyx_t_12;
-  __Pyx_memviewslice __pyx_t_13 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  Py_ssize_t __pyx_t_14;
+  Py_ssize_t __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  int __pyx_t_14;
   int __pyx_t_15;
-  int __pyx_t_16;
+  Py_ssize_t __pyx_t_16;
   int __pyx_t_17;
-  Py_ssize_t __pyx_t_18;
+  int __pyx_t_18;
   Py_ssize_t __pyx_t_19;
-  int __pyx_t_20;
-  Py_ssize_t __pyx_t_21;
+  Py_ssize_t __pyx_t_20;
+  int __pyx_t_21;
   Py_ssize_t __pyx_t_22;
   Py_ssize_t __pyx_t_23;
   Py_ssize_t __pyx_t_24;
+  Py_ssize_t __pyx_t_25;
   __Pyx_RefNannySetupContext("pixel_sort", 0);
 
-  /* "lib/attribute_calculations.pyx":332
+  /* "lib/attribute_calculations.pyx":331
  *     # Output variables.
  *     #  Future work: Improve data structure here to something more efficient.
  *     internal = [[[] for _ in range(num_ws)] for _ in range(num_bands)]             # <<<<<<<<<<<<<<
  *     external = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
  * 
+ */
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 331, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __pyx_v_num_bands;
+  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
+    __pyx_v__ = __pyx_t_3;
+    __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 331, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_5 = __pyx_v_num_ws;
+    for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
+      __pyx_v__ = __pyx_t_6;
+      __pyx_t_7 = PyList_New(0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 331, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_7);
+      if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_7))) __PYX_ERR(0, 331, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+    }
+    if (unlikely(__Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 331, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  }
+  __pyx_v_internal = ((PyObject*)__pyx_t_1);
+  __pyx_t_1 = 0;
+
+  /* "lib/attribute_calculations.pyx":332
+ *     #  Future work: Improve data structure here to something more efficient.
+ *     internal = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
+ *     external = [[[] for _ in range(num_ws)] for _ in range(num_bands)]             # <<<<<<<<<<<<<<
+ * 
+ *     # internal = cvarray(shape=(num_ws,1), itemsize=sizeof(int), format="i")
  */
   __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 332, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -7439,38 +7468,10 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_8pixel_sort(CYTHON_UNUSE
     if (unlikely(__Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 332, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
-  __pyx_v_internal = ((PyObject*)__pyx_t_1);
-  __pyx_t_1 = 0;
-
-  /* "lib/attribute_calculations.pyx":333
- *     #  Future work: Improve data structure here to something more efficient.
- *     internal = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
- *     external = [[[] for _ in range(num_ws)] for _ in range(num_bands)]             # <<<<<<<<<<<<<<
- * 
- *     # internal = cvarray(shape=(num_ws,1), itemsize=sizeof(int), format="i")
- */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 333, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __pyx_v_num_bands;
-  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
-    __pyx_v__ = __pyx_t_3;
-    __pyx_t_4 = PyList_New(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 333, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __pyx_v_num_ws;
-    for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
-      __pyx_v__ = __pyx_t_6;
-      __pyx_t_7 = PyList_New(0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 333, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_7);
-      if (unlikely(__Pyx_ListComp_Append(__pyx_t_4, (PyObject*)__pyx_t_7))) __PYX_ERR(0, 333, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    }
-    if (unlikely(__Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_4))) __PYX_ERR(0, 333, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  }
   __pyx_v_external = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "lib/attribute_calculations.pyx":342
+  /* "lib/attribute_calculations.pyx":341
  * 
  *     # Moving window that defines the neighboring region for each pixel
  *     window = [-4, -3, 3, 4]             # <<<<<<<<<<<<<<
@@ -7483,62 +7484,127 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_8pixel_sort(CYTHON_UNUSE
   __pyx_t_8[3] = 4;
   memcpy(&(__pyx_v_window[0]), __pyx_t_8, sizeof(__pyx_v_window[0]) * (4));
 
-  /* "lib/attribute_calculations.pyx":344
+  /* "lib/attribute_calculations.pyx":343
  *     window = [-4, -3, 3, 4]
  * 
  *     for y in range(y_dim):             # <<<<<<<<<<<<<<
  *         for x in range(x_dim):
- *             # Set the current segment number
+ *             # Ignore pixels whose value is 0 (no data)
  */
   __pyx_t_2 = __pyx_v_y_dim;
   for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
     __pyx_v_y = __pyx_t_3;
 
-    /* "lib/attribute_calculations.pyx":345
+    /* "lib/attribute_calculations.pyx":344
  * 
  *     for y in range(y_dim):
  *         for x in range(x_dim):             # <<<<<<<<<<<<<<
- *             # Set the current segment number
- *             sn = label_image_view[x,y]
+ *             # Ignore pixels whose value is 0 (no data)
+ *             if intensity_image_view[x,y][0] == 0:
  */
     __pyx_t_5 = __pyx_v_x_dim;
     for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
       __pyx_v_x = __pyx_t_6;
 
-      /* "lib/attribute_calculations.pyx":347
+      /* "lib/attribute_calculations.pyx":346
  *         for x in range(x_dim):
+ *             # Ignore pixels whose value is 0 (no data)
+ *             if intensity_image_view[x,y][0] == 0:             # <<<<<<<<<<<<<<
+ *                 continue
+ *             # Set the current segment number
+ */
+      __pyx_t_9.data = __pyx_v_intensity_image_view.data;
+      __pyx_t_9.memview = __pyx_v_intensity_image_view.memview;
+      __PYX_INC_MEMVIEW(&__pyx_t_9, 0);
+      {
+    Py_ssize_t __pyx_tmp_idx = __pyx_v_x;
+    Py_ssize_t __pyx_tmp_shape = __pyx_v_intensity_image_view.shape[0];
+    Py_ssize_t __pyx_tmp_stride = __pyx_v_intensity_image_view.strides[0];
+    if (0 && (__pyx_tmp_idx < 0))
+        __pyx_tmp_idx += __pyx_tmp_shape;
+    if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
+        PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 0)");
+        __PYX_ERR(0, 346, __pyx_L1_error)
+    }
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
+}
+
+{
+    Py_ssize_t __pyx_tmp_idx = __pyx_v_y;
+    Py_ssize_t __pyx_tmp_shape = __pyx_v_intensity_image_view.shape[1];
+    Py_ssize_t __pyx_tmp_stride = __pyx_v_intensity_image_view.strides[1];
+    if (0 && (__pyx_tmp_idx < 0))
+        __pyx_tmp_idx += __pyx_tmp_shape;
+    if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
+        PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 1)");
+        __PYX_ERR(0, 346, __pyx_L1_error)
+    }
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
+}
+
+__pyx_t_9.shape[0] = __pyx_v_intensity_image_view.shape[2];
+__pyx_t_9.strides[0] = __pyx_v_intensity_image_view.strides[2];
+    __pyx_t_9.suboffsets[0] = -1;
+
+__pyx_t_10 = 0;
+      __pyx_t_11 = (((*((int *) ( /* dim=0 */ (__pyx_t_9.data + __pyx_t_10 * __pyx_t_9.strides[0]) ))) == 0) != 0);
+      __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
+      __pyx_t_9.memview = NULL;
+      __pyx_t_9.data = NULL;
+      if (__pyx_t_11) {
+
+        /* "lib/attribute_calculations.pyx":347
+ *             # Ignore pixels whose value is 0 (no data)
+ *             if intensity_image_view[x,y][0] == 0:
+ *                 continue             # <<<<<<<<<<<<<<
+ *             # Set the current segment number
+ *             sn = label_image_view[x,y]
+ */
+        goto __pyx_L13_continue;
+
+        /* "lib/attribute_calculations.pyx":346
+ *         for x in range(x_dim):
+ *             # Ignore pixels whose value is 0 (no data)
+ *             if intensity_image_view[x,y][0] == 0:             # <<<<<<<<<<<<<<
+ *                 continue
+ *             # Set the current segment number
+ */
+      }
+
+      /* "lib/attribute_calculations.pyx":349
+ *                 continue
  *             # Set the current segment number
  *             sn = label_image_view[x,y]             # <<<<<<<<<<<<<<
  *             # Assign the internal pixel
  *             for b in range(num_bands):
  */
-      __pyx_t_9 = __pyx_v_x;
-      __pyx_t_10 = __pyx_v_y;
-      __pyx_v_sn = (*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_label_image_view.data + __pyx_t_9 * __pyx_v_label_image_view.strides[0]) ) + __pyx_t_10 * __pyx_v_label_image_view.strides[1]) )));
+      __pyx_t_12 = __pyx_v_x;
+      __pyx_t_13 = __pyx_v_y;
+      __pyx_v_sn = (*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_label_image_view.data + __pyx_t_12 * __pyx_v_label_image_view.strides[0]) ) + __pyx_t_13 * __pyx_v_label_image_view.strides[1]) )));
 
-      /* "lib/attribute_calculations.pyx":349
+      /* "lib/attribute_calculations.pyx":351
  *             sn = label_image_view[x,y]
  *             # Assign the internal pixel
  *             for b in range(num_bands):             # <<<<<<<<<<<<<<
  *                 internal[b][sn].append(intensity_image_view[x,y][b])
  * 
  */
-      __pyx_t_11 = __pyx_v_num_bands;
-      for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
-        __pyx_v_b = __pyx_t_12;
+      __pyx_t_14 = __pyx_v_num_bands;
+      for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
+        __pyx_v_b = __pyx_t_15;
 
-        /* "lib/attribute_calculations.pyx":350
+        /* "lib/attribute_calculations.pyx":352
  *             # Assign the internal pixel
  *             for b in range(num_bands):
  *                 internal[b][sn].append(intensity_image_view[x,y][b])             # <<<<<<<<<<<<<<
  * 
  *             # Determine the external values within the window
  */
-        __pyx_t_1 = __Pyx_GetItemInt(PyList_GET_ITEM(__pyx_v_internal, __pyx_v_b), __pyx_v_sn, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 350, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_GetItemInt(PyList_GET_ITEM(__pyx_v_internal, __pyx_v_b), __pyx_v_sn, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 352, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_13.data = __pyx_v_intensity_image_view.data;
-        __pyx_t_13.memview = __pyx_v_intensity_image_view.memview;
-        __PYX_INC_MEMVIEW(&__pyx_t_13, 0);
+        __pyx_t_9.data = __pyx_v_intensity_image_view.data;
+        __pyx_t_9.memview = __pyx_v_intensity_image_view.memview;
+        __PYX_INC_MEMVIEW(&__pyx_t_9, 0);
         {
     Py_ssize_t __pyx_tmp_idx = __pyx_v_x;
     Py_ssize_t __pyx_tmp_shape = __pyx_v_intensity_image_view.shape[0];
@@ -7547,9 +7613,9 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_8pixel_sort(CYTHON_UNUSE
         __pyx_tmp_idx += __pyx_tmp_shape;
     if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
         PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 0)");
-        __PYX_ERR(0, 350, __pyx_L1_error)
+        __PYX_ERR(0, 352, __pyx_L1_error)
     }
-        __pyx_t_13.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
 {
@@ -7560,37 +7626,37 @@ static PyObject *__pyx_pf_3lib_22attribute_calculations_8pixel_sort(CYTHON_UNUSE
         __pyx_tmp_idx += __pyx_tmp_shape;
     if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
         PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 1)");
-        __PYX_ERR(0, 350, __pyx_L1_error)
+        __PYX_ERR(0, 352, __pyx_L1_error)
     }
-        __pyx_t_13.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_13.shape[0] = __pyx_v_intensity_image_view.shape[2];
-__pyx_t_13.strides[0] = __pyx_v_intensity_image_view.strides[2];
-    __pyx_t_13.suboffsets[0] = -1;
+__pyx_t_9.shape[0] = __pyx_v_intensity_image_view.shape[2];
+__pyx_t_9.strides[0] = __pyx_v_intensity_image_view.strides[2];
+    __pyx_t_9.suboffsets[0] = -1;
 
-__pyx_t_14 = __pyx_v_b;
-        __pyx_t_4 = __Pyx_PyInt_From_int((*((int *) ( /* dim=0 */ (__pyx_t_13.data + __pyx_t_14 * __pyx_t_13.strides[0]) )))); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 350, __pyx_L1_error)
+__pyx_t_16 = __pyx_v_b;
+        __pyx_t_4 = __Pyx_PyInt_From_int((*((int *) ( /* dim=0 */ (__pyx_t_9.data + __pyx_t_16 * __pyx_t_9.strides[0]) )))); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 352, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
-        __PYX_XDEC_MEMVIEW(&__pyx_t_13, 1);
-        __pyx_t_13.memview = NULL;
-        __pyx_t_13.data = NULL;
-        __pyx_t_15 = __Pyx_PyObject_Append(__pyx_t_1, __pyx_t_4); if (unlikely(__pyx_t_15 == ((int)-1))) __PYX_ERR(0, 350, __pyx_L1_error)
+        __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
+        __pyx_t_9.memview = NULL;
+        __pyx_t_9.data = NULL;
+        __pyx_t_17 = __Pyx_PyObject_Append(__pyx_t_1, __pyx_t_4); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 352, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       }
 
-      /* "lib/attribute_calculations.pyx":353
+      /* "lib/attribute_calculations.pyx":355
  * 
  *             # Determine the external values within the window
  *             for w in range(4):             # <<<<<<<<<<<<<<
  *                 i = window[w]
  *                 # Determine the external values in the x-axis
  */
-      for (__pyx_t_11 = 0; __pyx_t_11 < 4; __pyx_t_11+=1) {
-        __pyx_v_w = __pyx_t_11;
+      for (__pyx_t_14 = 0; __pyx_t_14 < 4; __pyx_t_14+=1) {
+        __pyx_v_w = __pyx_t_14;
 
-        /* "lib/attribute_calculations.pyx":354
+        /* "lib/attribute_calculations.pyx":356
  *             # Determine the external values within the window
  *             for w in range(4):
  *                 i = window[w]             # <<<<<<<<<<<<<<
@@ -7599,34 +7665,34 @@ __pyx_t_14 = __pyx_v_b;
  */
         __pyx_v_i = (__pyx_v_window[__pyx_v_w]);
 
-        /* "lib/attribute_calculations.pyx":357
+        /* "lib/attribute_calculations.pyx":359
  *                 # Determine the external values in the x-axis
  *                 # Check for edge conditions
  *                 if (x+i < 0) or (x+i >= x_dim):             # <<<<<<<<<<<<<<
  *                     continue
  *                 if label_image_view[x+i,y] != sn:
  */
-        __pyx_t_17 = (((__pyx_v_x + __pyx_v_i) < 0) != 0);
-        if (!__pyx_t_17) {
+        __pyx_t_18 = (((__pyx_v_x + __pyx_v_i) < 0) != 0);
+        if (!__pyx_t_18) {
         } else {
-          __pyx_t_16 = __pyx_t_17;
-          goto __pyx_L20_bool_binop_done;
+          __pyx_t_11 = __pyx_t_18;
+          goto __pyx_L21_bool_binop_done;
         }
-        __pyx_t_17 = (((__pyx_v_x + __pyx_v_i) >= __pyx_v_x_dim) != 0);
-        __pyx_t_16 = __pyx_t_17;
-        __pyx_L20_bool_binop_done:;
-        if (__pyx_t_16) {
+        __pyx_t_18 = (((__pyx_v_x + __pyx_v_i) >= __pyx_v_x_dim) != 0);
+        __pyx_t_11 = __pyx_t_18;
+        __pyx_L21_bool_binop_done:;
+        if (__pyx_t_11) {
 
-          /* "lib/attribute_calculations.pyx":358
+          /* "lib/attribute_calculations.pyx":360
  *                 # Check for edge conditions
  *                 if (x+i < 0) or (x+i >= x_dim):
  *                     continue             # <<<<<<<<<<<<<<
  *                 if label_image_view[x+i,y] != sn:
  *                     for b in range(num_bands):
  */
-          goto __pyx_L17_continue;
+          goto __pyx_L18_continue;
 
-          /* "lib/attribute_calculations.pyx":357
+          /* "lib/attribute_calculations.pyx":359
  *                 # Determine the external values in the x-axis
  *                 # Check for edge conditions
  *                 if (x+i < 0) or (x+i >= x_dim):             # <<<<<<<<<<<<<<
@@ -7635,41 +7701,41 @@ __pyx_t_14 = __pyx_v_b;
  */
         }
 
-        /* "lib/attribute_calculations.pyx":359
+        /* "lib/attribute_calculations.pyx":361
  *                 if (x+i < 0) or (x+i >= x_dim):
  *                     continue
  *                 if label_image_view[x+i,y] != sn:             # <<<<<<<<<<<<<<
  *                     for b in range(num_bands):
  *                         external[b][sn].append(intensity_image_view[x+i,y][b])
  */
-        __pyx_t_18 = (__pyx_v_x + __pyx_v_i);
-        __pyx_t_19 = __pyx_v_y;
-        __pyx_t_16 = (((*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_label_image_view.data + __pyx_t_18 * __pyx_v_label_image_view.strides[0]) ) + __pyx_t_19 * __pyx_v_label_image_view.strides[1]) ))) != __pyx_v_sn) != 0);
-        if (__pyx_t_16) {
+        __pyx_t_19 = (__pyx_v_x + __pyx_v_i);
+        __pyx_t_20 = __pyx_v_y;
+        __pyx_t_11 = (((*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_label_image_view.data + __pyx_t_19 * __pyx_v_label_image_view.strides[0]) ) + __pyx_t_20 * __pyx_v_label_image_view.strides[1]) ))) != __pyx_v_sn) != 0);
+        if (__pyx_t_11) {
 
-          /* "lib/attribute_calculations.pyx":360
+          /* "lib/attribute_calculations.pyx":362
  *                     continue
  *                 if label_image_view[x+i,y] != sn:
  *                     for b in range(num_bands):             # <<<<<<<<<<<<<<
  *                         external[b][sn].append(intensity_image_view[x+i,y][b])
  * 
  */
-          __pyx_t_12 = __pyx_v_num_bands;
-          for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_12; __pyx_t_20+=1) {
-            __pyx_v_b = __pyx_t_20;
+          __pyx_t_15 = __pyx_v_num_bands;
+          for (__pyx_t_21 = 0; __pyx_t_21 < __pyx_t_15; __pyx_t_21+=1) {
+            __pyx_v_b = __pyx_t_21;
 
-            /* "lib/attribute_calculations.pyx":361
+            /* "lib/attribute_calculations.pyx":363
  *                 if label_image_view[x+i,y] != sn:
  *                     for b in range(num_bands):
  *                         external[b][sn].append(intensity_image_view[x+i,y][b])             # <<<<<<<<<<<<<<
  * 
  *                 # Determine the external values in the y-axis
  */
-            __pyx_t_4 = __Pyx_GetItemInt(PyList_GET_ITEM(__pyx_v_external, __pyx_v_b), __pyx_v_sn, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 361, __pyx_L1_error)
+            __pyx_t_4 = __Pyx_GetItemInt(PyList_GET_ITEM(__pyx_v_external, __pyx_v_b), __pyx_v_sn, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 363, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_4);
-            __pyx_t_13.data = __pyx_v_intensity_image_view.data;
-            __pyx_t_13.memview = __pyx_v_intensity_image_view.memview;
-            __PYX_INC_MEMVIEW(&__pyx_t_13, 0);
+            __pyx_t_9.data = __pyx_v_intensity_image_view.data;
+            __pyx_t_9.memview = __pyx_v_intensity_image_view.memview;
+            __PYX_INC_MEMVIEW(&__pyx_t_9, 0);
             {
     Py_ssize_t __pyx_tmp_idx = (__pyx_v_x + __pyx_v_i);
     Py_ssize_t __pyx_tmp_shape = __pyx_v_intensity_image_view.shape[0];
@@ -7678,9 +7744,9 @@ __pyx_t_14 = __pyx_v_b;
         __pyx_tmp_idx += __pyx_tmp_shape;
     if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
         PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 0)");
-        __PYX_ERR(0, 361, __pyx_L1_error)
+        __PYX_ERR(0, 363, __pyx_L1_error)
     }
-        __pyx_t_13.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
 {
@@ -7691,27 +7757,27 @@ __pyx_t_14 = __pyx_v_b;
         __pyx_tmp_idx += __pyx_tmp_shape;
     if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
         PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 1)");
-        __PYX_ERR(0, 361, __pyx_L1_error)
+        __PYX_ERR(0, 363, __pyx_L1_error)
     }
-        __pyx_t_13.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_13.shape[0] = __pyx_v_intensity_image_view.shape[2];
-__pyx_t_13.strides[0] = __pyx_v_intensity_image_view.strides[2];
-    __pyx_t_13.suboffsets[0] = -1;
+__pyx_t_9.shape[0] = __pyx_v_intensity_image_view.shape[2];
+__pyx_t_9.strides[0] = __pyx_v_intensity_image_view.strides[2];
+    __pyx_t_9.suboffsets[0] = -1;
 
-__pyx_t_21 = __pyx_v_b;
-            __pyx_t_1 = __Pyx_PyInt_From_int((*((int *) ( /* dim=0 */ (__pyx_t_13.data + __pyx_t_21 * __pyx_t_13.strides[0]) )))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 361, __pyx_L1_error)
+__pyx_t_22 = __pyx_v_b;
+            __pyx_t_1 = __Pyx_PyInt_From_int((*((int *) ( /* dim=0 */ (__pyx_t_9.data + __pyx_t_22 * __pyx_t_9.strides[0]) )))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 363, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __PYX_XDEC_MEMVIEW(&__pyx_t_13, 1);
-            __pyx_t_13.memview = NULL;
-            __pyx_t_13.data = NULL;
-            __pyx_t_15 = __Pyx_PyObject_Append(__pyx_t_4, __pyx_t_1); if (unlikely(__pyx_t_15 == ((int)-1))) __PYX_ERR(0, 361, __pyx_L1_error)
+            __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
+            __pyx_t_9.memview = NULL;
+            __pyx_t_9.data = NULL;
+            __pyx_t_17 = __Pyx_PyObject_Append(__pyx_t_4, __pyx_t_1); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 363, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           }
 
-          /* "lib/attribute_calculations.pyx":359
+          /* "lib/attribute_calculations.pyx":361
  *                 if (x+i < 0) or (x+i >= x_dim):
  *                     continue
  *                 if label_image_view[x+i,y] != sn:             # <<<<<<<<<<<<<<
@@ -7720,34 +7786,34 @@ __pyx_t_21 = __pyx_v_b;
  */
         }
 
-        /* "lib/attribute_calculations.pyx":365
+        /* "lib/attribute_calculations.pyx":367
  *                 # Determine the external values in the y-axis
  *                 # Check for edge conditions
  *                 if (y+i < 0) or (y+i >= y_dim):             # <<<<<<<<<<<<<<
  *                     continue
  *                 if label_image_view[x,y+i] != sn:
  */
-        __pyx_t_17 = (((__pyx_v_y + __pyx_v_i) < 0) != 0);
-        if (!__pyx_t_17) {
+        __pyx_t_18 = (((__pyx_v_y + __pyx_v_i) < 0) != 0);
+        if (!__pyx_t_18) {
         } else {
-          __pyx_t_16 = __pyx_t_17;
-          goto __pyx_L26_bool_binop_done;
+          __pyx_t_11 = __pyx_t_18;
+          goto __pyx_L27_bool_binop_done;
         }
-        __pyx_t_17 = (((__pyx_v_y + __pyx_v_i) >= __pyx_v_y_dim) != 0);
-        __pyx_t_16 = __pyx_t_17;
-        __pyx_L26_bool_binop_done:;
-        if (__pyx_t_16) {
+        __pyx_t_18 = (((__pyx_v_y + __pyx_v_i) >= __pyx_v_y_dim) != 0);
+        __pyx_t_11 = __pyx_t_18;
+        __pyx_L27_bool_binop_done:;
+        if (__pyx_t_11) {
 
-          /* "lib/attribute_calculations.pyx":366
+          /* "lib/attribute_calculations.pyx":368
  *                 # Check for edge conditions
  *                 if (y+i < 0) or (y+i >= y_dim):
  *                     continue             # <<<<<<<<<<<<<<
  *                 if label_image_view[x,y+i] != sn:
  *                     for b in range(num_bands):
  */
-          goto __pyx_L17_continue;
+          goto __pyx_L18_continue;
 
-          /* "lib/attribute_calculations.pyx":365
+          /* "lib/attribute_calculations.pyx":367
  *                 # Determine the external values in the y-axis
  *                 # Check for edge conditions
  *                 if (y+i < 0) or (y+i >= y_dim):             # <<<<<<<<<<<<<<
@@ -7756,41 +7822,41 @@ __pyx_t_21 = __pyx_v_b;
  */
         }
 
-        /* "lib/attribute_calculations.pyx":367
+        /* "lib/attribute_calculations.pyx":369
  *                 if (y+i < 0) or (y+i >= y_dim):
  *                     continue
  *                 if label_image_view[x,y+i] != sn:             # <<<<<<<<<<<<<<
  *                     for b in range(num_bands):
  *                         external[b][sn].append(intensity_image_view[x,y+i][b])
  */
-        __pyx_t_22 = __pyx_v_x;
-        __pyx_t_23 = (__pyx_v_y + __pyx_v_i);
-        __pyx_t_16 = (((*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_label_image_view.data + __pyx_t_22 * __pyx_v_label_image_view.strides[0]) ) + __pyx_t_23 * __pyx_v_label_image_view.strides[1]) ))) != __pyx_v_sn) != 0);
-        if (__pyx_t_16) {
+        __pyx_t_23 = __pyx_v_x;
+        __pyx_t_24 = (__pyx_v_y + __pyx_v_i);
+        __pyx_t_11 = (((*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_label_image_view.data + __pyx_t_23 * __pyx_v_label_image_view.strides[0]) ) + __pyx_t_24 * __pyx_v_label_image_view.strides[1]) ))) != __pyx_v_sn) != 0);
+        if (__pyx_t_11) {
 
-          /* "lib/attribute_calculations.pyx":368
+          /* "lib/attribute_calculations.pyx":370
  *                     continue
  *                 if label_image_view[x,y+i] != sn:
  *                     for b in range(num_bands):             # <<<<<<<<<<<<<<
  *                         external[b][sn].append(intensity_image_view[x,y+i][b])
  * 
  */
-          __pyx_t_12 = __pyx_v_num_bands;
-          for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_12; __pyx_t_20+=1) {
-            __pyx_v_b = __pyx_t_20;
+          __pyx_t_15 = __pyx_v_num_bands;
+          for (__pyx_t_21 = 0; __pyx_t_21 < __pyx_t_15; __pyx_t_21+=1) {
+            __pyx_v_b = __pyx_t_21;
 
-            /* "lib/attribute_calculations.pyx":369
+            /* "lib/attribute_calculations.pyx":371
  *                 if label_image_view[x,y+i] != sn:
  *                     for b in range(num_bands):
  *                         external[b][sn].append(intensity_image_view[x,y+i][b])             # <<<<<<<<<<<<<<
  * 
  *     return internal, external
  */
-            __pyx_t_1 = __Pyx_GetItemInt(PyList_GET_ITEM(__pyx_v_external, __pyx_v_b), __pyx_v_sn, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 369, __pyx_L1_error)
+            __pyx_t_1 = __Pyx_GetItemInt(PyList_GET_ITEM(__pyx_v_external, __pyx_v_b), __pyx_v_sn, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 371, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_13.data = __pyx_v_intensity_image_view.data;
-            __pyx_t_13.memview = __pyx_v_intensity_image_view.memview;
-            __PYX_INC_MEMVIEW(&__pyx_t_13, 0);
+            __pyx_t_9.data = __pyx_v_intensity_image_view.data;
+            __pyx_t_9.memview = __pyx_v_intensity_image_view.memview;
+            __PYX_INC_MEMVIEW(&__pyx_t_9, 0);
             {
     Py_ssize_t __pyx_tmp_idx = __pyx_v_x;
     Py_ssize_t __pyx_tmp_shape = __pyx_v_intensity_image_view.shape[0];
@@ -7799,9 +7865,9 @@ __pyx_t_21 = __pyx_v_b;
         __pyx_tmp_idx += __pyx_tmp_shape;
     if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
         PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 0)");
-        __PYX_ERR(0, 369, __pyx_L1_error)
+        __PYX_ERR(0, 371, __pyx_L1_error)
     }
-        __pyx_t_13.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
 {
@@ -7812,27 +7878,27 @@ __pyx_t_21 = __pyx_v_b;
         __pyx_tmp_idx += __pyx_tmp_shape;
     if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
         PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 1)");
-        __PYX_ERR(0, 369, __pyx_L1_error)
+        __PYX_ERR(0, 371, __pyx_L1_error)
     }
-        __pyx_t_13.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_9.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_13.shape[0] = __pyx_v_intensity_image_view.shape[2];
-__pyx_t_13.strides[0] = __pyx_v_intensity_image_view.strides[2];
-    __pyx_t_13.suboffsets[0] = -1;
+__pyx_t_9.shape[0] = __pyx_v_intensity_image_view.shape[2];
+__pyx_t_9.strides[0] = __pyx_v_intensity_image_view.strides[2];
+    __pyx_t_9.suboffsets[0] = -1;
 
-__pyx_t_24 = __pyx_v_b;
-            __pyx_t_4 = __Pyx_PyInt_From_int((*((int *) ( /* dim=0 */ (__pyx_t_13.data + __pyx_t_24 * __pyx_t_13.strides[0]) )))); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 369, __pyx_L1_error)
+__pyx_t_25 = __pyx_v_b;
+            __pyx_t_4 = __Pyx_PyInt_From_int((*((int *) ( /* dim=0 */ (__pyx_t_9.data + __pyx_t_25 * __pyx_t_9.strides[0]) )))); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_4);
-            __PYX_XDEC_MEMVIEW(&__pyx_t_13, 1);
-            __pyx_t_13.memview = NULL;
-            __pyx_t_13.data = NULL;
-            __pyx_t_15 = __Pyx_PyObject_Append(__pyx_t_1, __pyx_t_4); if (unlikely(__pyx_t_15 == ((int)-1))) __PYX_ERR(0, 369, __pyx_L1_error)
+            __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
+            __pyx_t_9.memview = NULL;
+            __pyx_t_9.data = NULL;
+            __pyx_t_17 = __Pyx_PyObject_Append(__pyx_t_1, __pyx_t_4); if (unlikely(__pyx_t_17 == ((int)-1))) __PYX_ERR(0, 371, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
           }
 
-          /* "lib/attribute_calculations.pyx":367
+          /* "lib/attribute_calculations.pyx":369
  *                 if (y+i < 0) or (y+i >= y_dim):
  *                     continue
  *                 if label_image_view[x,y+i] != sn:             # <<<<<<<<<<<<<<
@@ -7840,18 +7906,19 @@ __pyx_t_24 = __pyx_v_b;
  *                         external[b][sn].append(intensity_image_view[x,y+i][b])
  */
         }
-        __pyx_L17_continue:;
+        __pyx_L18_continue:;
       }
+      __pyx_L13_continue:;
     }
   }
 
-  /* "lib/attribute_calculations.pyx":371
+  /* "lib/attribute_calculations.pyx":373
  *                         external[b][sn].append(intensity_image_view[x,y+i][b])
  * 
  *     return internal, external             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
+  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 373, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_INCREF(__pyx_v_internal);
   __Pyx_GIVEREF(__pyx_v_internal);
@@ -7863,9 +7930,9 @@ __pyx_t_24 = __pyx_v_b;
   __pyx_t_4 = 0;
   goto __pyx_L0;
 
-  /* "lib/attribute_calculations.pyx":313
- * @cython.boundscheck(False)
- * @cython.wraparound(False)
+  /* "lib/attribute_calculations.pyx":312
+ * 
+ * 
  * def pixel_sort(int[:,:,:] intensity_image_view,             # <<<<<<<<<<<<<<
  *                int[:,:] label_image_view,
  *                int x_dim, int y_dim, int num_ws, int num_bands):
@@ -7876,7 +7943,7 @@ __pyx_t_24 = __pyx_v_b;
   __Pyx_XDECREF(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_7);
-  __PYX_XDEC_MEMVIEW(&__pyx_t_13, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
   __Pyx_AddTraceback("lib.attribute_calculations.pixel_sort", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -22670,17 +22737,17 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__28);
   __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(6, 0, 16, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lib_attribute_calculations_pyx, __pyx_n_s_selective_pixel_sort, 261, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 261, __pyx_L1_error)
 
-  /* "lib/attribute_calculations.pyx":313
- * @cython.boundscheck(False)
- * @cython.wraparound(False)
+  /* "lib/attribute_calculations.pyx":312
+ * 
+ * 
  * def pixel_sort(int[:,:,:] intensity_image_view,             # <<<<<<<<<<<<<<
  *                int[:,:] label_image_view,
  *                int x_dim, int y_dim, int num_ws, int num_bands):
  */
-  __pyx_tuple__30 = PyTuple_Pack(16, __pyx_n_s_intensity_image_view, __pyx_n_s_label_image_view, __pyx_n_s_x_dim, __pyx_n_s_y_dim, __pyx_n_s_num_ws, __pyx_n_s_num_bands, __pyx_n_s_y, __pyx_n_s_x, __pyx_n_s_i, __pyx_n_s_w, __pyx_n_s_window, __pyx_n_s_sn, __pyx_n_s_internal, __pyx_n_s_external, __pyx_n_s_b, __pyx_n_s__25); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 313, __pyx_L1_error)
+  __pyx_tuple__30 = PyTuple_Pack(16, __pyx_n_s_intensity_image_view, __pyx_n_s_label_image_view, __pyx_n_s_x_dim, __pyx_n_s_y_dim, __pyx_n_s_num_ws, __pyx_n_s_num_bands, __pyx_n_s_y, __pyx_n_s_x, __pyx_n_s_i, __pyx_n_s_w, __pyx_n_s_window, __pyx_n_s_sn, __pyx_n_s_internal, __pyx_n_s_external, __pyx_n_s_b, __pyx_n_s__25); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__30);
   __Pyx_GIVEREF(__pyx_tuple__30);
-  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(6, 0, 16, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lib_attribute_calculations_pyx, __pyx_n_s_pixel_sort, 313, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 313, __pyx_L1_error)
+  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(6, 0, 16, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_lib_attribute_calculations_pyx, __pyx_n_s_pixel_sort, 312, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 312, __pyx_L1_error)
 
   /* "View.MemoryView":284
  *         return self.name
@@ -23052,16 +23119,16 @@ static int __pyx_pymod_exec_attribute_calculations(PyObject *__pyx_pyinit_module
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_selective_pixel_sort, __pyx_t_1) < 0) __PYX_ERR(0, 261, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "lib/attribute_calculations.pyx":313
- * @cython.boundscheck(False)
- * @cython.wraparound(False)
+  /* "lib/attribute_calculations.pyx":312
+ * 
+ * 
  * def pixel_sort(int[:,:,:] intensity_image_view,             # <<<<<<<<<<<<<<
  *                int[:,:] label_image_view,
  *                int x_dim, int y_dim, int num_ws, int num_bands):
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_3lib_22attribute_calculations_9pixel_sort, NULL, __pyx_n_s_lib_attribute_calculations); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_3lib_22attribute_calculations_9pixel_sort, NULL, __pyx_n_s_lib_attribute_calculations); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_pixel_sort, __pyx_t_1) < 0) __PYX_ERR(0, 313, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_pixel_sort, __pyx_t_1) < 0) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "lib/attribute_calculations.pyx":1
