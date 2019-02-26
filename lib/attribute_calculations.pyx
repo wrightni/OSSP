@@ -237,7 +237,7 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
 
         # Entropy
         histogram_i = np.bincount(internal[0][ws])
-        features[6] = spstats.entropy(histogram_i,base=2)
+        features[6] = spstats.entropy(histogram_i, base=2)
 
         ## Neighborhood Values
         # N. Average Intensity
@@ -248,7 +248,7 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
         features[9] = np.amax(external[0][ws])
         # N. Entropy
         histogram_e = np.bincount(external[0][ws])
-        features[10] = spstats.entropy(histogram_e,base=2)
+        features[10] = spstats.entropy(histogram_e, base=2)
 
         # Date of image acquisition
         features[11] = int(date)
@@ -278,7 +278,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
     for y in range(y_dim):
         for x in range(x_dim):
             # Set the current segment number
-            sn = label_image_view[x,y]
+            sn = label_image_view[x, y]
 
             # Select only the ws with the correct label
             if sn != label:
@@ -286,7 +286,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
 
             # Assign the internal pixel
             for b in range(num_bands):
-                internal[b][0].append(intensity_image_view[x,y][b])
+                internal[b][0].append(intensity_image_view[x, y, b])
 
             # Determine the external values within the window
             for w in range(4):
@@ -295,16 +295,16 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
                 # Check for edge conditions
                 if (x+i < 0) or (x+i >= x_dim):
                     continue
-                if label_image_view[x+i,y] != sn:
+                if label_image_view[x+i, y] != sn:
                     for b in range(num_bands):
-                        external[b][0].append(intensity_image_view[x+i,y][b])
+                        external[b][0].append(intensity_image_view[x+i, y, b])
                 # Determine the external values in the y-axis
                 # Check for edge conditions
                 if (y+i < 0) or (y+i >= y_dim):
                     continue
-                if label_image_view[x,y+i] != sn:
+                if label_image_view[x, y+i] != sn:
                     for b in range(num_bands):
-                        external[b][0].append(intensity_image_view[x,y+i][b])
+                        external[b][0].append(intensity_image_view[x, y+i, b])
 
     return internal, external
 
@@ -343,13 +343,14 @@ def pixel_sort(int[:,:,:] intensity_image_view,
     for y in range(y_dim):
         for x in range(x_dim):
             # Ignore pixels whose value is 0 (no data)
-            if intensity_image_view[x,y][0] == 0:
+            if intensity_image_view[x, y, 0] == 0:
                 continue
+
             # Set the current segment number
             sn = label_image_view[x,y]
             # Assign the internal pixel
             for b in range(num_bands):
-                internal[b][sn].append(intensity_image_view[x,y][b])
+                internal[b][sn].append(intensity_image_view[x, y, b])
 
             # Determine the external values within the window
             for w in range(4):
@@ -358,16 +359,16 @@ def pixel_sort(int[:,:,:] intensity_image_view,
                 # Check for edge conditions
                 if (x+i < 0) or (x+i >= x_dim):
                     continue
-                if label_image_view[x+i,y] != sn:
+                if label_image_view[x+i, y] != sn:
                     for b in range(num_bands):
-                        external[b][sn].append(intensity_image_view[x+i,y][b])
+                        external[b][sn].append(intensity_image_view[x+i, y, b])
 
                 # Determine the external values in the y-axis
                 # Check for edge conditions
                 if (y+i < 0) or (y+i >= y_dim):
                     continue
-                if label_image_view[x,y+i] != sn:
+                if label_image_view[x, y+i] != sn:
                     for b in range(num_bands):
-                        external[b][sn].append(intensity_image_view[x,y+i][b])
+                        external[b][sn].append(intensity_image_view[x, y+i, b])
 
     return internal, external

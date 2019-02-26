@@ -136,7 +136,7 @@ def main():
         full_image_name = os.path.join(task.get_src_dir(), task.get_id())
         if os.path.isfile(full_image_name):
             if verbose:
-                print("Loading image...")
+                print("Loading image {}...".format(task.get_id()))
             src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
         else:
             print("File not found: {}".format(full_image_name))
@@ -156,13 +156,9 @@ def main():
             lower, upper = pp.histogram_threshold(src_ds, image_type)
         elif stretch == 'none':
             # Maybe guess this from the input dataset instead of assuming?
-            if image_type == 'wv02_ms' or image_type == 'pan':
-                lower = 1
-                upper = 2047
-            # Can assume srgb images are already 8bit
-            else:
-                lower = 1
-                upper = 255
+            src_type = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
+            lower = 1
+            upper = 2**src_type - 1
 
         # Create a blank output image dataset
         # Save the classified image output as a geotiff

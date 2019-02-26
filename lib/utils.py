@@ -62,49 +62,43 @@ def create_task_list(src_dir, dst_dir):
             task.set_dst_dir(dst_dir)
         return [task]
 
-    for path_, directories, files in os.walk(src_dir):
+    # Loop through contents of the given directory
+    for file in os.listdir(src_dir):
 
-        # Skip hidden directories
-        if path_[0] == '.':
+        # Skip hidden files
+        if file[0] == '.':
             continue
 
-        # Loop through contents in the current directory
-        for file in files:
+        image_name,ext = os.path.splitext(file)
+        # Check that the file is .tif or .jpg format
+        ext = ext.lower()
+        if ext not in valid_extensions:
+            continue
 
-            # Skip hidden files
-            if file[0] == '.':
+        ## Create the task object for this image
+        task = Task(file, src_dir)
+
+        # Set the output directory if given, otherwise use the default
+        if dst_dir == "default":
+            task.set_dst_dir(os.path.join(src_dir, "classified"))
+        else:
+            task.set_dst_dir(dst_dir)
+
+        ## Check the output directory for completed files
+        if os.path.isdir(task.get_dst_dir()):
+            clsf_imgs = os.listdir(task.get_dst_dir())
+            # Finished images have a consistant naming structure:
+            target_name = image_name + '_classified.tif'
+            for img in clsf_imgs:
+                # Set this task to complete if we find the finished image
+                if img == target_name:
+                    task.mark_complete()
+
+            ## Skip to the next image if this task is complete
+            if task.is_complete():
                 continue
 
-            image_name,ext = os.path.splitext(file)
-            # Check that the file is .tif or .jpg format
-            ext = ext.lower()
-            if ext not in valid_extensions:
-                continue
-            
-            ## Create the task object for this image
-            task = Task(file, path_)
-
-            # Set the output directory if given, otherwise use the default
-            if dst_dir == "default":
-                task.set_dst_dir(os.path.join(path_, "classified"))
-            else:
-                task.set_dst_dir(dst_dir)
-
-            ## Check the output directory for completed files
-            if os.path.isdir(task.get_dst_dir()):
-                clsf_imgs = os.listdir(task.get_dst_dir())
-                # Finished images have a consistant naming structure:
-                target_name = image_name + '_classified.tif'
-                for img in clsf_imgs:
-                    # Set this task to complete if we find the finished image
-                    if img == target_name:
-                        task.mark_complete()
-                
-                ## Skip to the next image if this task is complete
-                if task.is_complete():
-                    continue
-
-            task_list.append(task)
+        task_list.append(task)
 
     return task_list
 

@@ -73,7 +73,7 @@ def segment_image(input_data, image_type=False):
         amplification_factor = 3.1
         gauss_sigma = 2
         feature_separation = 5
-        band_list = [2, 1, 0]
+        band_list = [0, 1, 2]
 
     image_data = [input_data[band_list[0]],
                   input_data[band_list[1]],
@@ -88,11 +88,15 @@ def segment_image(input_data, image_type=False):
 
     # ws_bound = segmentation.find_boundaries(segmented_data)
     # ws_display = utils.create_composite(image_data)
+    #
+    # save_name = '/Users/nicholas/Desktop/original_{}.png'
+    # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+    #
     # ws_display[:, :, 0][ws_bound] = 240
     # ws_display[:, :, 1][ws_bound] = 80
     # ws_display[:, :, 2][ws_bound] = 80
     #
-    # save_name = '/Users/nicholas/Desktop/original_{}.png'
+    # save_name = '/Users/nicholas/Desktop/seg_{}.png'
     # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
 
     return segmented_data
