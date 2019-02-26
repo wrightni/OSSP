@@ -144,11 +144,14 @@ def main():
         image_date = pp.parse_metadata(metadata, image_type)
 
         # For processing icebridge imagery:
-        if image_date <= 150 and image_type == 'srgb':
-            tds_label = 'spring'
+        if image_type == 'srgb':
+            if image_date <= 150:
+                tds_label = 'spring'
+            else:
+                tds_label = 'summer'
 
         # Load Training Data
-        tds = utils.load_tds(tds_file, tds_label)
+        tds = utils.load_tds(tds_file, tds_label, image_type)
 
         # Set necessary parameters for reading image 1 block at a time
         x_dim = src_ds.RasterXSize
