@@ -104,7 +104,7 @@ def create_task_list(src_dir, dst_dir):
 
 
 #### Load Training Dataset (TDS) (Label Vector and Feature Matrix)
-def load_tds(file_name, list_name):
+def load_tds(file_name, list_name, image_type):
     '''
     INPUT: 
         input_directory of .h5 training data
@@ -113,20 +113,25 @@ def load_tds(file_name, list_name):
     RETURNS:
         tds = [label_vector, training_feature_matrix]
     '''
+    if image_type == 'srgb':
+        list_prefix = list_name + "_"
+        label_name = "{}labels".format(list_prefix)
+    else:
+        list_prefix = ""
+        label_name = list_name
+
 
     ## Load the training data
     with h5py.File(file_name, 'r') as training_file:
-        label_vector = training_file[list_name][:]
-        segments = training_file['segment_list'][:]
-        training_feature_matrix = training_file['feature_matrix'][:]
+        label_vector = training_file[label_name][:]
+        training_feature_matrix = training_file['{}feature_matrix'.format(list_prefix)][:]
 
     ## Convert inputs to python lists
     label_vector = label_vector.tolist()
     training_feature_matrix = training_feature_matrix.tolist()
     # Remove feature lists that don't have an associated label
     training_feature_matrix = training_feature_matrix[:len(label_vector)]
-    # print "__"
-    # print len(label_vector)
+
     ## Remove the segments labeled "unknown" (0)
     while 0 in label_vector:
         i = label_vector.index(0)
@@ -138,14 +143,6 @@ def load_tds(file_name, list_name):
         i = label_vector.index(6)
         label_vector.pop(i)
         training_feature_matrix.pop(i)
-
-    ## Remove the segments labeled "Shadow" (0)
-    # x = 0
-    # while 5 in label_vector:
-    #     i = label_vector.index(5)
-    #     label_vector.pop(i)
-    #     training_feature_matrix.pop(i)
-    #     x+=1
 
     # Combine the label vector and training feature matrix into one variable. 
     tds = [label_vector,training_feature_matrix]

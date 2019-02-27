@@ -95,9 +95,6 @@ def main():
     #   of that image. 
     task_list = utils.create_task_list(os.path.join(src_dir, src_file), dst_dir)
 
-    # Load Training Data
-    tds = utils.load_tds(tds_file, tds_label)
-
     for task in task_list:
 
         # ASP: Restrict processing to the frame range
@@ -145,6 +142,16 @@ def main():
         # Read metadata to get image
         metadata = src_ds.GetMetadata()
         image_date = pp.parse_metadata(metadata, image_type)
+
+        # For processing icebridge imagery:
+        if image_type == 'srgb':
+            if image_date <= 150:
+                tds_label = 'spring'
+            else:
+                tds_label = 'summer'
+
+        # Load Training Data
+        tds = utils.load_tds(tds_file, tds_label, image_type)
 
         # Set necessary parameters for reading image 1 block at a time
         x_dim = src_ds.RasterXSize
