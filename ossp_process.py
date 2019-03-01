@@ -184,7 +184,8 @@ def main():
 
         lock = RLock()
         block_queue = construct_block_queue(block_size_x, block_size_y, x_dim, y_dim)
-        results_queue = Queue()
+        dst_queue = Queue()
+        stats_queue = Queue()
 
         # Display a progress bar
         if verbose:
@@ -201,7 +202,7 @@ def main():
 
         NUMBER_OF_PROCESSES = threads
         block_procs = [Process(target=process_block_queue,
-                               args=(lock, block_queue, results_queue, src_ds, dst_ds,
+                               args=(lock, block_queue, dst_queue, stats_queue, src_ds,
                                      assess_quality, stretch_params, tds, metadata))
                        for _ in range(NUMBER_OF_PROCESSES)]
 
@@ -215,8 +216,14 @@ def main():
         # Collect data from processes as they complete tasks
         finished_threads = 0
         while finished_threads < NUMBER_OF_PROCESSES:
-            if not results_queue.empty():
-                val = results_queue.get()
+            if not dst_queue.empty():
+                # Write information to output
+                x, y, classified_block = dst_queue.get()
+                dst_ds.GetRasterBand(1).WriteArray(classified_block, xoff=x, yoff=y)
+                dst_ds.FlushCache()
+
+            if not stats_queue.empty():
+                val = stats_queue.get()
                 if val == None:
                     finished_threads += 1
                 else:
@@ -270,7 +277,7 @@ def construct_block_queue(block_size_x, block_size_y, x_dim, y_dim):
     return block_queue
 
 
-def process_block_queue(lock, block_queue, results_queue, src_ds, dst_ds,
+def process_block_queue(lock, block_queue, dst_queue, stats_queue, src_ds,
                         assess_quality, stretch_params, tds, im_metadata):
     '''
     Function run by each process. Will process blocks placed in the block_queue until the 'STOP' command is reached.
@@ -286,6 +293,7 @@ def process_block_queue(lock, block_queue, results_queue, src_ds, dst_ds,
         # Load block data with gdal (offset and block size)
         lock.acquire()
         image_data = src_ds.ReadAsArray(x, y, read_size_x, read_size_y)
+        print("PID: {} Bandcheck: {}".format(os.getpid(), src_ds.RasterXSize))
         lock.release()
 
         # Restructure raster for panchromatic images:
@@ -313,15 +321,12 @@ def process_block_queue(lock, block_queue, results_queue, src_ds, dst_ds,
         #   running total.
         pixel_counts_block = utils.count_features(classified_block)
 
-        # Write information to output
-        lock.acquire()
-        dst_ds.GetRasterBand(1).WriteArray(classified_block, xoff=x, yoff=y)
-        dst_ds.FlushCache()
-        lock.release()
+        # Pass the data back to the main thread for writing
+        dst_queue.put((x,y,classified_block))
+        stats_queue.put((quality_score, pixel_counts_block))
 
-        results_queue.put((quality_score, pixel_counts_block))
-
-    results_queue.put(None)
+    dst_queue.put(None)
+    stats_queue.put(None)
 
 
 def check_read_size(y, block_size_y, y_dim):
