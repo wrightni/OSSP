@@ -218,9 +218,12 @@ def main():
         while finished_threads < NUMBER_OF_PROCESSES:
             if not dst_queue.empty():
                 # Write information to output
-                x, y, classified_block = dst_queue.get()
-                dst_ds.GetRasterBand(1).WriteArray(classified_block, xoff=x, yoff=y)
-                dst_ds.FlushCache()
+                data = dst_queue.get()
+                if data != None:
+                    x, y, classified_block = data
+                    dst_ds.GetRasterBand(1).WriteArray(classified_block, xoff=x, yoff=y)
+                    print(np.amax(classified_block))
+                    dst_ds.FlushCache()
 
             if not stats_queue.empty():
                 val = stats_queue.get()
@@ -293,7 +296,7 @@ def process_block_queue(lock, block_queue, dst_queue, stats_queue, src_ds,
         # Load block data with gdal (offset and block size)
         lock.acquire()
         image_data = src_ds.ReadAsArray(x, y, read_size_x, read_size_y)
-        print("PID: {} Bandcheck: {}".format(os.getpid(), src_ds.RasterXSize))
+        print("PID: {} Bandcheck: {}".format(os.getpid(), src_ds.RasterCount))
         lock.release()
 
         # Restructure raster for panchromatic images:
