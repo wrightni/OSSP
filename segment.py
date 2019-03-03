@@ -142,6 +142,11 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
     sobel_image_red = filters.scharr(smooth_im_red)
 
     sobel_image = sobel_image_blue + np.abs(sobel_image_blue-sobel_image_red)
+    # Clear the unused data
+    smooth_im_blue = None
+    sobel_image_blue = None
+    sobel_image_red = None
+    smooth_im_red = None
 
     # Adjust the sobel image based on the given threshold and amp factor.
     upper_threshold = 255. / amplification_factor
@@ -165,7 +170,7 @@ def watershed_transformation(image_data, sobel_threshold, amplification_factor, 
 
     # Find local minimum values in the sobel image by inverting
     #   sobel_image and finding the local maximum values
-    inv_sobel = 255-sobel_image
+    inv_sobel = 255 - sobel_image
     local_min = feature.peak_local_max(inv_sobel, min_distance=feature_separation,
                                        indices=False, num_peaks_per_label=1)
     markers = ndimage.label(local_min)[0]
