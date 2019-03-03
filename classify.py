@@ -2,15 +2,13 @@
 # author: Nick Wright
 
 import argparse
-from multiprocessing import Process, Queue
 from ctypes import *
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 import matplotlib.pyplot as plt
-import time
 
-from lib import utils, debug_tools
+from lib import utils
 from lib import attribute_calculations as attr_calc
 from lib import create_clsf_raster as ccr
 
