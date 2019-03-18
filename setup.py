@@ -9,8 +9,9 @@ USE_CYTHON = True
 
 ext = '.pyx' if USE_CYTHON else '.c'
 
-extensions = [Extension("lib.attribute_calculations", ['lib/attribute_calculations'+ext]),
-              Extension("lib.create_clsf_raster", ["lib/create_clsf_raster"+ext])]
+extensions = [Extension("lib.attribute_calculations", ['lib/attribute_calculations' + ext]),
+              Extension("lib.create_clsf_raster", ["lib/create_clsf_raster" + ext]),
+              Extension("lib.rescale_intensity", ['lib/rescale_intensity' + ext])]
 
 if USE_CYTHON:
     from Cython.Build import cythonize

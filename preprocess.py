@@ -12,194 +12,57 @@ import datetime
 import subprocess
 import numpy as np
 import matplotlib.image as mimg
-from skimage import exposure
 from skimage.measure import block_reduce
-import gdal
-from lib import utils
+from lib import utils, rescale_intensity
 
 
-def prepare_image(input_path, image_name, image_type,
-                  output_path=None, number_of_splits=1, apply_correction=False, verbose=False):
-    """
-    Reads an image file and prepares it for further processing.
-        1. Rescales image intensity based on the input histogram.
-        2. Splits it into a N parts where N is the nearest perfect square
-            to number_of_splits. These are saved to disk if N>1.
-        3. Grids each split into ~600x600 pixel blocks. Images are processed one
-            block at a time in Watershed and RandomForest. Blocks are in the
-            format of [[[block1]], [[block2]], ...[[blockn]]], read left to
-            right and top to bottom
-    Image splits are saved as .h5 formatted datasets.
-        Attrs: {[Image Date], [Image Type], [Dimensions]}
-        Datasets: 1 for each image band, array of ~600x600 blocks
-    If number of splits is 1, data is returned as a list of the band subimages
-        and nothing is saved to disk.
-    """
-
-    # Open dataset with GDAL
-    full_image_name = os.path.join(input_path, image_name)
-    # Check to make sure the given file exists
-    if os.path.isfile(full_image_name):
-        if verbose:
-            print("Reading image...")
-        dataset = gdal.Open(full_image_name)
-    else:
-        print "File not found: " + full_image_name
-        return None, None
-
-    # Check number_of_splits input
-    #   Round number_of_splits to the nearest square number
-    base = round(math.sqrt(number_of_splits))
-    # Approximate size of image block.
-    # Might want to select this based on input image type?
-    desired_block_size = 8000
-
-    # Make sure each split is big enough for at least 2 grids in each 
-    #   dimension. If not, there's really little reason to be splitting this 
-    #   image in the first place.
-    if number_of_splits < 1:
-        while (dataset.RasterXSize / base < desired_block_size * 2
-               or dataset.RasterYSize / base < desired_block_size * 2):
-            base -= 1
-            if verbose:
-                print("Too many splits chosen, reducing to: %i" % (base * base))
-
-    # Calculate grids for dividing raw image into chunks.
-    #   Determine the number of splits in x and y dimensions. These are equal to
-    #       eachother, but set up to allow non-square dimensions if desired.
-    x_splits = int(base)
-    y_splits = x_splits
-    # Update number of splits
-    number_of_splits = x_splits * y_splits
-
-    # Determine the dimensions of each image split
-    split_cols, split_rows, = find_splitsize(dataset.RasterXSize,
-                                             dataset.RasterYSize,
-                                             x_splits,
-                                             y_splits)
-    # Determine the block size within each split
-    block_cols, block_rows = find_blocksize(split_cols,
-                                            split_rows,
-                                            desired_block_size)
-    if verbose:
-        print("Image Dimensions: %i x %i" % (dataset.RasterXSize,
-                                             dataset.RasterYSize))
-        print("Split Dimensions: %i x %i" % (split_cols, split_rows))
-        print("Block Dimensions: %i x %i" % (block_cols, block_rows))
-
-    # Find image metadata
-    #   Pull the image date from the header information. Read_metadata assume
-    #       early june date if no data can be found.
-    #   Determine bands from dataset
-    metadata = dataset.GetMetadata()
-    image_date = parse_metadata(metadata, image_type)
-    band_count = dataset.RasterCount
-    if verbose:
-        print("Number of Bands: %i" % band_count)
-        print("Using %i as image date." % image_date)
-
-    # Verify output directory
-    #   If no output directory was provided, default to input_dir/splits
-    if output_path is None and number_of_splits > 1:
-        output_path = os.path.join(input_path, "splits")
-    # If the output path doesnt already exist, create that directory
-    if output_path is not None:
-        if not os.path.isdir(output_path):
-            os.makedirs(output_path)
-
-    # Split and Grid Image
-    #   Splits the image into number_of_split parts, and divides each split into
-    #       block_cols X block_rows grids.
-    #   If number_of_splits > 1, saves each split in its own .h5 file with
-    #       n datasets; one for each spectral band.
-
-    lower, upper = histogram_threshold(dataset)
-
-    # Now that we've checked the histograms of each band in the image,
-    #   we can rescale and save each band.
-    bands_output = {}  # {band_id: [subimage][row][column]}l
-    for b in range(1, band_count + 1):
-        # Read the gdal dataset and load into numpy array
-        gdal_band = dataset.GetRasterBand(b)
-        band = gdal_band.ReadAsArray()
-        gdal_band = None
-
-        if apply_correction is True:
-            if verbose:
-                print("Rescaling band %s" % b)
-            # Rescale the band based on the lower and upper thresholds found
-            band = rescale_band(band, lower, upper)
-        else:
-            if image_type == 'wv02_ms' or image_type == 'pan':
-                band = rescale_band(band, 1, 2047)
-                # band = rescale_band(band, 0, .9)
-
-        # If the image is not being split, construct image blocks and
-        #   compile that data to return
-        if number_of_splits == 1:
-            bands_output[b], dimensions = construct_blocks(
-                band,
-                block_cols,
-                block_rows,
-                [split_rows, split_cols])
-            if output_path is not None:
-                # Saves the preprocessed image. Mostly used for
-                # making the images for training set creation.
-                fname = os.path.splitext(image_name)[0] + "_segmented.h5"
-                dst_file = os.path.join(output_path, fname)
-                # Save the data to disk
-                write_to_hdf5(dst_file, bands_output[b], b, image_type,
-                              image_date, dimensions)
-        else:
-            if verbose:
-                print("Splitting band %s..." % b)
-            # Divide the data into a list of splits1
-            band_split = split_band(band, x_splits,
-                                    y_splits, split_cols, split_rows)
-            snum = 1  # Tracker for file naming
-            for split in band_split:
-                # Grid this split into the appropriate number of blocks
-                split_blocked, dimensions = construct_blocks(
-                    split,
-                    block_cols,
-                    block_rows,
-                    [split_rows, split_cols])
-                # Determine the output filename
-                fname = (os.path.splitext(image_name)[0]
-                         + "_s{0:02d}of{1:02d}.h5".format(snum,
-                                                          number_of_splits))
-                dst_file = os.path.join(output_path, fname)
-                # Save the data to disk
-                write_to_hdf5(dst_file, split_blocked, b, image_type,
-                              image_date, dimensions)
-                snum += 1
-        if verbose:
-            print("Band %s complete" % b)
-
-    im_info = [dimensions, image_date]
-
-    # If number_of_splits is more than 1, bands_output will be empty
-    return bands_output, im_info
-
-
-def rescale_band(band, bottom, top):
+def rescale_band(image, bottom, top):
     """
     Rescale and image data from range [bottom,top] to uint8 ([0,255])
     """
     # Record pixels that contain no spectral information, indicated by a value of 0
-    empty_pixels = np.zeros(np.shape(band), dtype='bool')
-    empty_pixels[band == 0] = True
+    # empty_pixels = np.zeros_like(image, dtype='bool')
+    # empty_pixels[image == 0] = 1
 
+    imin, imax = (bottom, top)
+    omin, omax = (1, 255)
+
+    return rescale_intensity.rescale_intensity(image, imin, imax, omin, omax)
+
+    # image_float = np.zeros_like(image, dtype=np.float16)
+    # np.clip(image, imin, imax, out=image)
+    #
+    # # image = (image - imin) / float(imax - imin)
+    # # return np.array(image * (omax - omin) + omin, dtype=np.uint8)
+    #
+    # np.subtract(image, imin, out=image)
+    # np.divide(image, float(imax - imin), out=image_float)
+    # image = None
+    # np.multiply(image_float, (omax - omin), out=image_float)
+    # np.add(image_float, omin, out=image_float)
+    # image_float[empty_pixels] = 0
+    # empty_pixels = None
+    #
+    # return np.array(image_float, dtype=np.uint8)
+
+    # image = (image - imin) / float(imax - imin)
+
+    # return
+
+    # return np.array(image * (omax - omin) + omin, dtype=dtype)
     # Rescale the data to use the full int8 (0,255) pixel value range.
     # Check the band where the values of the matrix are greater than zero so that the
     # percentages ignore empty pixels.
-    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
-                                                out_range=(1, 255))
-    new_band = np.array(stretched_band, dtype=np.uint8)
-    # Set the empty pixel areas back to a value of 0.
-    new_band[empty_pixels] = 0
+    # stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
+    #                                             out_range=np.uint8)
+    # print(stretched_band.dtype)
+    # stretched_band = band
+    # new_band = np.array(stretched_band, dtype=np.uint8)
+    # print(new_band.dtype)
+    # # Set the empty pixel areas back to a value of 0.
+    # stretched_band[empty_pixels] = 0
 
-    return new_band
+    # return stretched_band
 
 
 def run_pgc_pansharpen(script_path, input_filepath, output_dir):

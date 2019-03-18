@@ -12,8 +12,6 @@ from lib import utils
 from lib import attribute_calculations as attr_calc
 from lib import create_clsf_raster as ccr
 
-# tqdm for progress bar
-
 
 def classify_image(input_image, watershed_data, training_dataset, meta_data):
     '''
@@ -31,7 +29,7 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data):
 
     #### Prepare Data and Variables
     # num_blocks = len(input_image[1])
-    num_bands = np.shape(input_image)[0]
+    # num_bands = np.shape(input_image)[0]
     image_type = meta_data[0]
     image_date = meta_data[1]
 
@@ -43,7 +41,10 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data):
     #     image_data.append(utils.create_composite(
     #             [input_image[b][blk] for b in range(1,num_bands+1)]))
     # input_image = None
-    image_data = utils.create_composite([input_image[b] for b in range(num_bands)])
+    # print(np.shape(input_image))
+    # image_data = utils.create_composite([input_image[b] for b in range(num_bands)])
+    # print(np.shape(image_data))
+    # input_image = None
 
     ## Parse training_dataset input
     label_vector = training_dataset[0]
@@ -61,7 +62,7 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data):
     rfc = RandomForestClassifier(n_estimators=100)
     rfc.fit(training_feature_matrix, label_vector)
 
-    clsf_block = classify_block(image_data, watershed_data, image_type, image_date, rfc)
+    clsf_block = classify_block(input_image, watershed_data, image_type, image_date, rfc)
 
     return clsf_block
 
@@ -69,9 +70,8 @@ def classify_image(input_image, watershed_data, training_dataset, meta_data):
 def classify_block(image_block, watershed_block, image_type, image_date, rfc):
 
     # Cast data as C int.
-    image_block = np.ndarray.astype(image_block, c_int)
-    watershed_block = np.ndarray.astype(watershed_block, c_int)
-    # print(np.shape(image_block))
+    # image_block.astype(c_uint8)
+    watershed_block = watershed_block.astype(c_uint32, copy=False)
 
     ## If the block contains no data, set the classification values to 0
     if np.amax(image_block) < 2:
@@ -97,7 +97,7 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
 
     # Predict the classification of each segment
     ws_predictions = rfc.predict(input_feature_matrix)
-    ws_predictions = np.ndarray.astype(ws_predictions,dtype=c_int)
+    ws_predictions = np.ndarray.astype(ws_predictions, dtype=c_int, copy=False)
 
     # Create the classified image by replacing watershed id's with
     #   classification values.

@@ -5,6 +5,7 @@ cimport cython
 import numpy as np
 from scipy import stats as spstats
 from ctypes import *
+import psutil
 
 
 def analyze_srgb_image(input_image, watershed_image, segment_id=False):
@@ -13,13 +14,10 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     using the raw pixel values in input image. Attributes calculated for
     srgb type images.
     '''
-
     cdef int num_ws
     cdef int x_dim, y_dim, num_bands
-    cdef int ws, b
+    cdef int ws, b, i
     cdef int ws_size
-    # cdef int histogram_i
-    # cdef int histogram_e
    
     # If no segment id is provided, analyze the features for every watershed
     # in the input image. If a segment id is provided, just analyze the features
@@ -31,35 +29,36 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     else:
         num_ws = 1
 
-    x_dim, y_dim, num_bands = np.shape(input_image)
+    num_bands, x_dim, y_dim = np.shape(input_image)
 
-    feature_matrix = np.empty((num_ws,16))
-    cdef double [:, :] fm_view = feature_matrix
+    feature_matrix = np.empty((num_ws,16), dtype=c_float)
+    cdef float [:, :] fm_view = feature_matrix
 
    #### Need to convert images to dtype c_int
     # input_image = np.ndarray.astype(input_image, c_int)
     # watershed_image = np.ndarray.astype(watershed_image, c_int)
     if segment_id is not False:
         internal, external = selective_pixel_sort(input_image, watershed_image,
-                                    x_dim, y_dim, num_bands, segment_id)
+                                                  x_dim, y_dim, num_bands, segment_id)
     else:
-        internal, external = pixel_sort(input_image, watershed_image,
-                                        x_dim, y_dim,
-                                        num_ws, num_bands)
+        (internal, external, 
+         internal_ext, external_ext) = pixel_sort_extended(input_image, watershed_image,
+                                                           x_dim, y_dim,
+                                                           num_ws, num_bands)
 
+    print(external_ext[6000])
+    print(last_index(external_ext[6000]))
     for ws in range(num_ws):
-
-        ws_size = len(internal[0][ws])
-        # Average Pixel Intensity of each band
+        # Average and Variance of Pixel Intensity for each band
         for b in range(3):
-            fm_view[ws, b] = sum(internal[b][ws]) / float(ws_size)
-            if fm_view[ws, b] < 1:
-                fm_view[ws, b] = 1
-
-        # Standard Deviation of each band
-        fm_view[ws, 3] = np.std(internal[0][ws])
-        fm_view[ws, 4] = np.std(internal[1][ws])
-        fm_view[ws, 5] = np.std(internal[2][ws])
+            count = internal[ws, b, 0]
+            mean = internal[ws, b, 1]
+            M2 = internal[ws, b, 2]
+            variance = M2 / count
+            if mean < 1:
+                mean = 1
+            fm_view[ws, b] = mean
+            fm_view[ws, b+3] = variance
 
         # See Miao et al for band ratios
         # Band Ratio 1
@@ -77,28 +76,34 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
                            (2 * fm_view[ws, 2] - fm_view[ws, 1] - fm_view[ws, 0]))
 
         # Size of Superpixel
-        fm_view[ws, 9] = ws_size
+        fm_view[ws, 9] = internal[ws, 0, 0]
 
         # Entropy
-        histogram_i = np.bincount(internal[1][ws])
+        histogram_i = internal_ext[ws] #np.bincount(internal[1][ws])
         fm_view[ws, 10] = spstats.entropy(histogram_i, base=2)
 
         ## Neighborhood Values
         # N. Average Intensity
-        fm_view[ws, 11] = sum(external[1][ws]) / float(len(external[1][ws]))
+        n_mean = external[ws, 1, 1]
+        fm_view[ws, 11] = n_mean
         # N. Standard Deviation
-        fm_view[ws, 12] = np.std(external[1][ws])
+        n_var = external[ws, 1, 2] / external[ws, 1, 0]
+        fm_view[ws, 12] = n_var
         # N. Maximum Single Value
-        fm_view[ws, 13] = np.amax(external[1][ws])
+        n_max = last_index(external_ext[ws])
+        fm_view[ws, 13] = n_max
         # N. Entropy
-        histogram_e = np.bincount(external[1][ws])
+        histogram_e = external_ext[ws]
+        # histogram_e = np.bincount(external[1][ws])
         fm_view[ws, 14] = spstats.entropy(histogram_e, base=2)
 
         # Date of image acquisition (removed, but need placeholder)
         fm_view[ws, 15] = 0
 
-    feature_matrix = np.copy(fm_view)
-    return feature_matrix
+        if 5999 < ws < 6020:
+            print(feature_matrix[ws])
+
+    return np.copy(fm_view)
 
 
 def analyze_ms_image(input_image, watershed_image, segment_id=False):
@@ -107,14 +112,11 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
     using the raw pixel values in input image. Attributes calculated for
     multispectral type WorldView 2 images.
     '''
-    # feature_matrix = []
-
-    cdef int num_ws
-    cdef int x_dim, y_dim, num_bands
-    cdef double features[18]
+    cdef int num_bands, x_dim, y_dim
     cdef int ws, b
-    cdef int ws_size
+    cdef int num_ws
 
+    num_bands, x_dim, y_dim = np.shape(input_image)
     # If no segment id is provided, analyze the features for every watershed
     # in the input image. If a segment id is provided, just analyze the features
     # for that one segment.
@@ -125,31 +127,24 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
     else:
         num_ws = 1
 
-    feature_matrix = np.empty((num_ws,18))
-    cdef double [:, :] fm_view = feature_matrix
+    feature_matrix = np.empty((num_ws, 18), dtype=c_float)
+    cdef float[:, :] fm_view = feature_matrix
 
-    x_dim, y_dim, num_bands = np.shape(input_image)
-
-   #### Need to convert images to dtype c_int (done elsewhere)
-    # input_image = np.ndarray.astype(input_image, c_int)
-    # watershed_image = np.ndarray.astype(watershed_image, c_int)
+    # Choose how to sort pixels based
     if segment_id is not False:
         internal, external = selective_pixel_sort(input_image, watershed_image,
                                     x_dim, y_dim, num_bands, segment_id)
     else:
         internal, external = pixel_sort(input_image, watershed_image,
-                                        x_dim, y_dim,
-                                        num_ws, num_bands)
+                                    x_dim, y_dim, num_ws, num_bands)
 
     for ws in range(num_ws):
-
-        ws_size = len(internal[0][ws])
         # Average Pixel Intensity of each band
         for b in range(8):
-            fm_view[ws,b] = sum(internal[b][ws]) / float(ws_size)
-            if fm_view[ws,b] < 1:
-                fm_view[ws,b] = 1
-
+            mean = internal[ws, b, 1]
+            if mean < 1:
+                mean = 1
+            fm_view[ws, b] = mean
 
         # Important band ratios
         fm_view[ws, 8] = fm_view[ws, 0] / fm_view[ws, 2]
@@ -161,7 +156,8 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
         fm_view[ws, 14] = fm_view[ws, 4] / fm_view[ws, 6]
 
         # N. Average Intensity
-        fm_view[ws, 15] = sum(external[4][ws]) / float(len(external[4][ws]))
+        n_mean = external[ws, 4, 1]
+        fm_view[ws, 15] = n_mean
 
         # b1-b7 / b1+b7
         fm_view[ws, 16] = ((fm_view[ws, 0] - fm_view[ws, 6]) / (fm_view[ws, 0] + fm_view[ws, 6]))
@@ -169,8 +165,7 @@ def analyze_ms_image(input_image, watershed_image, segment_id=False):
         # b3-b5 / b3+b5
         fm_view[ws, 17] = ((fm_view[ws, 2] - fm_view[ws, 4]) / (fm_view[ws, 2] + fm_view[ws, 4]))
 
-    feature_matrix = np.copy(fm_view)
-    return feature_matrix
+    return np.copy(fm_view)
 
 
 def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
@@ -258,8 +253,8 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
     return feature_matrix
 
 
-def selective_pixel_sort(int[:,:,:] intensity_image_view,
-                         int[:,:] label_image_view,
+def selective_pixel_sort(unsigned char[:,:,:] intensity_image_view,
+                         unsigned int[:,:] label_image_view,
                          int x_dim, int y_dim, 
                          int num_bands, int label):
     
@@ -286,7 +281,7 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
 
             # Assign the internal pixel
             for b in range(num_bands):
-                internal[b][0].append(intensity_image_view[x, y, b])
+                internal[b][0].append(intensity_image_view[b, x, y])
 
             # Determine the external values within the window
             for w in range(4):
@@ -297,45 +292,42 @@ def selective_pixel_sort(int[:,:,:] intensity_image_view,
                     continue
                 if label_image_view[x+i, y] != sn:
                     for b in range(num_bands):
-                        external[b][0].append(intensity_image_view[x+i, y, b])
+                        external[b][0].append(intensity_image_view[b, x+i, y])
                 # Determine the external values in the y-axis
                 # Check for edge conditions
                 if (y+i < 0) or (y+i >= y_dim):
                     continue
                 if label_image_view[x, y+i] != sn:
                     for b in range(num_bands):
-                        external[b][0].append(intensity_image_view[x, y+i, b])
+                        external[b][0].append(intensity_image_view[b, x, y+i])
 
     return internal, external
 
 
-def pixel_sort(int[:,:,:] intensity_image_view,
-               int[:,:] label_image_view,
+def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
+               const unsigned int[:,:] label_image_view,
                int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
-    pixels into a list of internal and external intensity pixels for every 
-    label in the label image. 
+    pixels into a list of internal and external intensity pixels for every
+    label in the label image.
     Returns:
         Internal: Array of length (number of labels), each element is a list
             of intensity values for that label number.
         External: Array of length (number of labels), each element is a list
             of intensity values that are adjacent to that label number.
     '''
-    cdef int y,x,i,w
-    cdef int window[4]
-    cdef int sn
+    cdef int x, y, sn, i, w, b
+    cdef unsigned char new_val
+    cdef float count, mean, M2
+    cdef float delta, delta2
+    cdef char window[4]
 
-    # Output variables. 
-    #  Future work: Improve data structure here to something more efficient.
-    internal = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
-    external = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
-
-    # internal = cvarray(shape=(num_ws,1), itemsize=sizeof(int), format="i")
-    # cdef int [:] internal_view = internal
-    
-    # external = cvarray(shape=(num_ws,1), itemsize=sizeof(int), format="i")
-    # cdef int [:] external_view = external
+    # Output variables.
+    internal = np.zeros((num_ws, num_bands, 3), dtype=c_float)
+    cdef float[:, :, :] in_view = internal
+    external = np.zeros((num_ws, num_bands, 3), dtype=c_float)
+    cdef float[:, :, :] ex_view = external
 
     # Moving window that defines the neighboring region for each pixel
     window = [-4, -3, 3, 4]
@@ -343,32 +335,256 @@ def pixel_sort(int[:,:,:] intensity_image_view,
     for y in range(y_dim):
         for x in range(x_dim):
             # Ignore pixels whose value is 0 (no data)
-            if intensity_image_view[x, y, 0] == 0:
+            if intensity_image_view[0, x, y] == 0:
                 continue
 
             # Set the current segment number
-            sn = label_image_view[x,y]
+            sn = label_image_view[x, y]
             # Assign the internal pixel
             for b in range(num_bands):
-                internal[b][sn].append(intensity_image_view[x, y, b])
+                # Find the new pixel
+                new_val = intensity_image_view[b, x, y]
+                # Read the previous values
+                count = in_view[sn, b, 0]
+                mean = in_view[sn, b, 1]
+                M2 = in_view[sn, b, 2]
+
+                # Update the stored values
+                count += 1
+                delta = new_val - mean
+                mean += delta / count
+                delta2 = new_val - mean
+                M2 += delta * delta2
+
+                # Update the internal list
+                in_view[sn, b, 0] = count
+                in_view[sn, b, 1] = mean
+                in_view[sn, b, 2] = M2
 
             # Determine the external values within the window
             for w in range(4):
                 i = window[w]
                 # Determine the external values in the x-axis
                 # Check for edge conditions
-                if (x+i < 0) or (x+i >= x_dim):
+                if (x + i < 0) or (x + i >= x_dim):
                     continue
-                if label_image_view[x+i, y] != sn:
+                if label_image_view[x + i, y] != sn:
                     for b in range(num_bands):
-                        external[b][sn].append(intensity_image_view[x+i, y, b])
+                        new_val = intensity_image_view[b, x + i, y]
+                        # Read the previous values
+                        count = ex_view[sn, b, 0]
+                        mean = ex_view[sn, b, 1]
+                        M2 = ex_view[sn, b, 2]
+
+                        # Update the stored values
+                        count += 1
+                        delta = new_val - mean
+                        mean += delta / count
+                        delta2 = new_val - mean
+                        M2 += delta * delta2
+
+                        # Update the internal list
+                        ex_view[sn, b, 0] = count
+                        ex_view[sn, b, 1] = mean
+                        ex_view[sn, b, 2] = M2
 
                 # Determine the external values in the y-axis
                 # Check for edge conditions
-                if (y+i < 0) or (y+i >= y_dim):
+                if (y + i < 0) or (y + i >= y_dim):
                     continue
-                if label_image_view[x, y+i] != sn:
+                if label_image_view[x, y + i] != sn:
                     for b in range(num_bands):
-                        external[b][sn].append(intensity_image_view[x, y+i, b])
+                        new_val = intensity_image_view[b, x, y + i]
+                        # Read the previous values
+                        count = ex_view[sn, b, 0]
+                        mean = ex_view[sn, b, 1]
+                        M2 = ex_view[sn, b, 2]
+
+                        # Update the stored values
+                        count += 1
+                        delta = new_val - mean
+                        mean += delta / count
+                        delta2 = new_val - mean
+                        M2 += delta * delta2
+
+                        # Update the internal list
+                        ex_view[sn, b, 0] = count
+                        ex_view[sn, b, 1] = mean
+                        ex_view[sn, b, 2] = M2
 
     return internal, external
+
+
+def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
+                        const unsigned int[:,:] label_image_view,
+                        int x_dim, int y_dim, int num_ws, int num_bands):
+    '''
+    Given an intensity image and label image of the same dimension, sort
+    pixels into a list of internal and external intensity pixels for every
+    label in the label image.
+    Returns:
+        Internal: Array of length (number of labels), each element is a list
+            of intensity values for that label number.
+        External: Array of length (number of labels), each element is a list
+            of intensity values that are adjacent to that label number.
+    '''
+    cdef int x, y, sn, i, w, b
+    cdef int h_count
+    cdef unsigned char new_val
+    cdef float count, mean, M2
+    cdef float delta, delta2
+    cdef char window[4]
+
+    # Output statistical variables.
+    internal = np.zeros((num_ws, num_bands, 3), dtype=c_float)
+    cdef float[:, :, :] in_view = internal
+    external = np.zeros((num_ws, num_bands, 3), dtype=c_float)
+    cdef float[:, :, :] ex_view = external
+
+    # Output histogram of each segment
+    internal_ext = np.zeros((num_ws, 256), dtype=c_int)
+    cdef int[:, :] in_ext_view = internal_ext
+    external_ext = np.zeros((num_ws, 256), dtype=c_int)
+    cdef int[:, :] ex_ext_view = external_ext
+
+    # Moving window that defines the neighboring region for each pixel
+    window = [-4, -3, 3, 4]
+
+    for y in range(y_dim):
+        for x in range(x_dim):
+            # Ignore pixels whose value is 0 (no data)
+            if intensity_image_view[0, x, y] == 0:
+                continue
+
+            # Set the current segment number
+            sn = label_image_view[x, y]
+            # Assign the internal pixel
+            for b in range(num_bands):
+                # Find the new pixel
+                new_val = intensity_image_view[b, x, y]
+                # Read the previous values
+                count = in_view[sn, b, 0]
+                mean = in_view[sn, b, 1]
+                M2 = in_view[sn, b, 2]
+
+                # Update the stored values
+                count += 1
+                delta = new_val - mean
+                mean += delta / count
+                delta2 = new_val - mean
+                M2 += delta * delta2
+
+                # Update the internal list
+                in_view[sn, b, 0] = count
+                in_view[sn, b, 1] = mean
+                in_view[sn, b, 2] = M2
+
+                # Increment this pixel value in the b0 histogram
+                if b == 0:
+                    h_count = in_ext_view[sn, new_val]
+                    h_count += 1
+                    in_ext_view[sn, new_val] = h_count
+
+            # Determine the external values within the window
+            for w in range(4):
+                i = window[w]
+                # Determine the external values in the x-axis
+                # Check for edge conditions
+                if (x + i < 0) or (x + i >= x_dim):
+                    continue
+                if label_image_view[x + i, y] != sn:
+                    for b in range(num_bands):
+                        new_val = intensity_image_view[b, x + i, y]
+                        # Read the previous values
+                        count = ex_view[sn, b, 0]
+                        mean = ex_view[sn, b, 1]
+                        M2 = ex_view[sn, b, 2]
+
+                        # Update the stored values
+                        count += 1
+                        delta = new_val - mean
+                        mean += delta / count
+                        delta2 = new_val - mean
+                        M2 += delta * delta2
+
+                        # Update the internal list
+                        ex_view[sn, b, 0] = count
+                        ex_view[sn, b, 1] = mean
+                        ex_view[sn, b, 2] = M2
+
+                        # Increment this pixel value in the b0 histogram
+                        if b == 0:
+                            h_count = ex_ext_view[sn, new_val]
+                            h_count += 1
+                            ex_ext_view[sn, new_val] = h_count
+
+                # Determine the external values in the y-axis
+                # Check for edge conditions
+                if (y + i < 0) or (y + i >= y_dim):
+                    continue
+                if label_image_view[x, y + i] != sn:
+                    for b in range(num_bands):
+                        new_val = intensity_image_view[b, x, y + i]
+                        # Read the previous values
+                        count = ex_view[sn, b, 0]
+                        mean = ex_view[sn, b, 1]
+                        M2 = ex_view[sn, b, 2]
+
+                        # Update the stored values
+                        count += 1
+                        delta = new_val - mean
+                        mean += delta / count
+                        delta2 = new_val - mean
+                        M2 += delta * delta2
+
+                        # Update the internal list
+                        ex_view[sn, b, 0] = count
+                        ex_view[sn, b, 1] = mean
+                        ex_view[sn, b, 2] = M2
+
+                        # Increment this pixel value in the b0 histogram
+                        if b == 0:
+                            h_count = ex_ext_view[sn, new_val]
+                            h_count += 1
+                            ex_ext_view[sn, new_val] = h_count
+
+    return internal, external, internal_ext, external_ext
+
+
+cdef int last_index(int[:] lst):
+    cdef int i
+    for i in range(255,-1,-1):
+        if lst[i] != 0:
+            return i
+
+    return 0
+
+def mem():
+    print str(round(psutil.Process().memory_info().rss/1024./1024., 2)) + ' MB'
+
+
+# From wikipedia: Welfords algorithm
+# for a new value newValue, compute the new count, new mean, the new M2.
+# mean accumulates the mean of the entire dataset
+# M2 aggregates the squared distance from the mean
+# count aggregates the number of samples seen so far
+# cdef float update(float count, float mean, float M2, char newValue):
+#     cdef float delta, delta2
+#     count += 1
+#     delta = newValue - mean
+#     mean += delta / count
+#     delta2 = newValue - mean
+#     M2 += delta * delta2
+#
+#     return (count, mean, M2)
+
+# retrieve the mean, variance and sample variance from an aggregate
+# def finalize(float count, float M2):
+#     cdef float variance sample_variance
+#     if count < 2:
+#         return 1
+#
+#     variance = M2 / count
+#     sampleVariance = M2 / (count - 1)
+#
+#     return variance, sampleVariance

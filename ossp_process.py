@@ -3,6 +3,7 @@
 # Nicholas Wright
 
 import os
+import time
 import argparse
 import csv
 import numpy as np
@@ -12,8 +13,9 @@ from segment import segment_image
 from classify import classify_image
 from lib import utils
 import gdal
+from memory_profiler import profile
 
-
+@profile
 def main():
     # Set Up Arguments
     parser = argparse.ArgumentParser()
@@ -42,7 +44,6 @@ def main():
                         help="Path for the pansharpening script if needed")
     parser.add_argument("-t", "--threads", type = int, default = 1,
                         help = "Number of subprocesses to start")
-
 
     # Parse Arguments
     args = parser.parse_args()
@@ -240,6 +241,7 @@ def main():
                     # Update the progress bar
                     if verbose: pbar.update()
 
+
         # Update the progress bar
         if verbose: pbar.update()
 
@@ -295,7 +297,6 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
     for block_indices in iter(block_queue.get, 'STOP'):
 
         x, y, read_size_x, read_size_y = block_indices
-
         # Load block data with gdal (offset and block size)
         lock.acquire()
         src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
@@ -312,14 +313,14 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
             quality_score = pp.calc_q_score(image_data[0])
         else:
             quality_score = 1.
-
         # Apply correction to block based on earlier histogram analysis (if applying correction)
         # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
         image_data = pp.rescale_band(image_data, lower, upper)
 
         # Segment image
         segmented_blocks = segment_image(image_data, image_type=image_type)
-
+        dst_queue.put(None)
+        return
         # Classify image
         classified_block = classify_image(image_data, segmented_blocks,
                                           tds, im_metadata)

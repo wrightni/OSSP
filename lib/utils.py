@@ -11,7 +11,6 @@ import matplotlib.colors as colors
 import matplotlib.image as mimg
 from ctypes import *
 
-
 valid_extensions = ['.tif','.tiff','.jpg']
 
 class Task:
