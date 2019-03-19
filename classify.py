@@ -99,6 +99,8 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
     ws_predictions = rfc.predict(input_feature_matrix)
     ws_predictions = np.ndarray.astype(ws_predictions, dtype=c_int, copy=False)
 
+    print(ws_predictions[:30])
+
     # Create the classified image by replacing watershed id's with
     #   classification values.
     # If there is more than one band, we have to select one (using 2 for 

@@ -13,9 +13,8 @@ from segment import segment_image
 from classify import classify_image
 from lib import utils
 import gdal
-from memory_profiler import profile
 
-@profile
+
 def main():
     # Set Up Arguments
     parser = argparse.ArgumentParser()
@@ -319,8 +318,7 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
 
         # Segment image
         segmented_blocks = segment_image(image_data, image_type=image_type)
-        dst_queue.put(None)
-        return
+
         # Classify image
         classified_block = classify_image(image_data, segmented_blocks,
                                           tds, im_metadata)

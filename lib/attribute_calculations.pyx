@@ -34,17 +34,17 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     feature_matrix = np.empty((num_ws,16), dtype=c_float)
     cdef float [:, :] fm_view = feature_matrix
 
-   #### Need to convert images to dtype c_int
+    print(num_bands, x_dim, y_dim)
+    #### Need to convert images to dtype c_int
     # input_image = np.ndarray.astype(input_image, c_int)
     # watershed_image = np.ndarray.astype(watershed_image, c_int)
     if segment_id is not False:
         internal, external = selective_pixel_sort(input_image, watershed_image,
                                                   x_dim, y_dim, num_bands, segment_id)
     else:
-        (internal, external, 
-         internal_ext, external_ext) = pixel_sort_extended(input_image, watershed_image,
-                                                           x_dim, y_dim,
-                                                           num_ws, num_bands)
+        internal, external, internal_ext, external_ext = pixel_sort_extended(input_image, watershed_image,
+                                                                            x_dim, y_dim,
+                                                                            num_ws, num_bands)
 
     print(external_ext[6000])
     print(last_index(external_ext[6000]))
@@ -101,7 +101,10 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
         fm_view[ws, 15] = 0
 
         if 5999 < ws < 6020:
-            print(feature_matrix[ws])
+            print(feature_matrix[ws][0])
+            # ws_size = len(internal_old[0][ws])
+            # print(sum(internal_old[0][ws]) / float(ws_size))
+            # print("-")
 
     return np.copy(fm_view)
 
@@ -562,6 +565,70 @@ cdef int last_index(int[:] lst):
 def mem():
     print str(round(psutil.Process().memory_info().rss/1024./1024., 2)) + ' MB'
 
+
+def pixel_sort_old(unsigned char[:,:,:] intensity_image_view,
+               unsigned int[:,:] label_image_view,
+               int x_dim, int y_dim, int num_ws, int num_bands):
+    '''
+    Given an intensity image and label image of the same dimension, sort
+    pixels into a list of internal and external intensity pixels for every 
+    label in the label image. 
+    Returns:
+        Internal: Array of length (number of labels), each element is a list
+            of intensity values for that label number.
+        External: Array of length (number of labels), each element is a list
+            of intensity values that are adjacent to that label number.
+    '''
+    cdef int y,x,i,w
+    cdef int window[4]
+    cdef int sn
+
+    # Output variables. 
+    #  Future work: Improve data structure here to something more efficient.
+    internal = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
+    external = [[[] for _ in range(num_ws)] for _ in range(num_bands)]
+
+    # internal = cvarray(shape=(num_ws,1), itemsize=sizeof(int), format="i")
+    # cdef int [:] internal_view = internal
+    
+    # external = cvarray(shape=(num_ws,1), itemsize=sizeof(int), format="i")
+    # cdef int [:] external_view = external
+
+    # Moving window that defines the neighboring region for each pixel
+    window = [-4, -3, 3, 4]
+
+    for y in range(y_dim):
+        mem()
+        for x in range(x_dim):
+            # Ignore pixels whose value is 0 (no data)
+            if intensity_image_view[x, y, 0] == 0:
+                continue
+
+            # Set the current segment number
+            sn = label_image_view[x,y]
+            # Assign the internal pixel
+            for b in range(num_bands):
+                internal[b][sn].append(intensity_image_view[b, x, y])
+            # Determine the external values within the window
+            for w in range(4):
+                i = window[w]
+                # Determine the external values in the x-axis
+                # Check for edge conditions
+                if (x+i < 0) or (x+i >= x_dim):
+                    continue
+                if label_image_view[x+i, y] != sn:
+                    for b in range(num_bands):
+                        external[b][sn].append(intensity_image_view[b, x+i, y])
+
+                # Determine the external values in the y-axis
+                # Check for edge conditions
+                if (y+i < 0) or (y+i >= y_dim):
+                    continue
+                if label_image_view[x, y+i] != sn:
+                    for b in range(num_bands):
+                        external[b][sn].append(intensity_image_view[b, x, y+i])
+
+    return internal
 
 # From wikipedia: Welfords algorithm
 # for a new value newValue, compute the new count, new mean, the new M2.

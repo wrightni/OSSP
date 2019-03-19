@@ -13,21 +13,33 @@ import subprocess
 import numpy as np
 import matplotlib.image as mimg
 from skimage.measure import block_reduce
+from skimage import exposure
 from lib import utils, rescale_intensity
 
 
-def rescale_band(image, bottom, top):
+def rescale_band(band, bottom, top):
     """
     Rescale and image data from range [bottom,top] to uint8 ([0,255])
     """
     # Record pixels that contain no spectral information, indicated by a value of 0
-    # empty_pixels = np.zeros_like(image, dtype='bool')
-    # empty_pixels[image == 0] = 1
+    empty_pixels = np.zeros(np.shape(band), dtype='bool')
+    empty_pixels[band == 0] = True
 
-    imin, imax = (bottom, top)
-    omin, omax = (1, 255)
+    # Rescale the data to use the full int8 (0,255) pixel value range.
+    # Check the band where the values of the matrix are greater than zero so that the
+    # percentages ignore empty pixels.
+    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
+                                                out_range=(1, 255))
+    new_band = np.array(stretched_band, dtype=np.uint8)
+    # Set the empty pixel areas back to a value of 0.
+    new_band[empty_pixels] = 0
 
-    return rescale_intensity.rescale_intensity(image, imin, imax, omin, omax)
+    return new_band
+    #
+    # imin, imax = (bottom, top)
+    # omin, omax = (1, 255)
+    #
+    # return rescale_intensity.rescale_intensity(image, imin, imax, omin, omax)
 
     # image_float = np.zeros_like(image, dtype=np.float16)
     # np.clip(image, imin, imax, out=image)

@@ -44,7 +44,7 @@ def segment_image(input_data, image_type=False):
         feature_separation = 1
         band_list = [4, 2, 1]
     else:   #image_type == 'srgb'
-        sobel_threshold = 0.03
+        sobel_threshold = 0.025
         amplification_factor = 3.1
         gauss_sigma = 2
         feature_separation = 5
