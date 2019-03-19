@@ -21,60 +21,10 @@ def rescale_band(band, bottom, top):
     """
     Rescale and image data from range [bottom,top] to uint8 ([0,255])
     """
-    # Record pixels that contain no spectral information, indicated by a value of 0
-    empty_pixels = np.zeros(np.shape(band), dtype='bool')
-    empty_pixels[band == 0] = True
+    imin, imax = (bottom, top)
+    omin, omax = (1, 255)
 
-    # Rescale the data to use the full int8 (0,255) pixel value range.
-    # Check the band where the values of the matrix are greater than zero so that the
-    # percentages ignore empty pixels.
-    stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
-                                                out_range=(1, 255))
-    new_band = np.array(stretched_band, dtype=np.uint8)
-    # Set the empty pixel areas back to a value of 0.
-    new_band[empty_pixels] = 0
-
-    return new_band
-    #
-    # imin, imax = (bottom, top)
-    # omin, omax = (1, 255)
-    #
-    # return rescale_intensity.rescale_intensity(image, imin, imax, omin, omax)
-
-    # image_float = np.zeros_like(image, dtype=np.float16)
-    # np.clip(image, imin, imax, out=image)
-    #
-    # # image = (image - imin) / float(imax - imin)
-    # # return np.array(image * (omax - omin) + omin, dtype=np.uint8)
-    #
-    # np.subtract(image, imin, out=image)
-    # np.divide(image, float(imax - imin), out=image_float)
-    # image = None
-    # np.multiply(image_float, (omax - omin), out=image_float)
-    # np.add(image_float, omin, out=image_float)
-    # image_float[empty_pixels] = 0
-    # empty_pixels = None
-    #
-    # return np.array(image_float, dtype=np.uint8)
-
-    # image = (image - imin) / float(imax - imin)
-
-    # return
-
-    # return np.array(image * (omax - omin) + omin, dtype=dtype)
-    # Rescale the data to use the full int8 (0,255) pixel value range.
-    # Check the band where the values of the matrix are greater than zero so that the
-    # percentages ignore empty pixels.
-    # stretched_band = exposure.rescale_intensity(band, in_range=(bottom, top),
-    #                                             out_range=np.uint8)
-    # print(stretched_band.dtype)
-    # stretched_band = band
-    # new_band = np.array(stretched_band, dtype=np.uint8)
-    # print(new_band.dtype)
-    # # Set the empty pixel areas back to a value of 0.
-    # stretched_band[empty_pixels] = 0
-
-    # return stretched_band
+    return rescale_intensity.rescale_intensity(band, imin, imax, omin, omax)
 
 
 def run_pgc_pansharpen(script_path, input_filepath, output_dir):
@@ -333,6 +283,7 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
 
     # Determine the width of the lower peak.
     lower_width = min_peak - thresh_bot
+    dynamic_range = max_peak - min_peak
 
     # Limit the amount of stretch to a percentage of the total dynamic range 
     #   in the case that all three main surface types are not represented (fewer
@@ -341,165 +292,29 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     # 256   or 2048
     # While WV images are 11bit, white ice tends to be ~600-800 intensity
     # Provide a floor and ceiling to the amount of stretch allowed
-    if len(peaks) < 3:
-        if image_type == 'pan' or image_type == 'wv02_ms':
-            max_bit = 2047
-            upper_limit = 0.25
-        else:
-            max_bit = 255
-            upper_limit = 0.6
+    # if len(peaks) < 3:
+    if image_type == 'pan' or image_type == 'wv02_ms':
+        max_bit = 2047
+        upper_limit = 0.25
+    else:
+        max_bit = 255
+        upper_limit = 0.9
 
-        # If the width of the lowest peak is less than 3% of the bit depth,
-        #   then the lower peak is likely open water. 3% determined visually, but
-        #   ocean has a much narrower peak than ponds or ice.
-        if float(lower_width)/max_bit >= 0.03:
-            min_range = int(max_bit * .08)
-            if lower > min_range:
-                lower = min_range
-        # If there are at least 2 peaks we don't need an upper limit, as the upper
-        #   limit is only to prevent open water only images from being stretched.
-        if len(peaks) < 2:
-            max_range = int(max_bit * upper_limit)
-            if upper < max_range:
-                upper = max_range
+    # If the width of the lowest peak is less than 3% of the bit depth,
+    #   then the lower peak is likely open water. 3% determined visually, but
+    #   ocean has a much narrower peak than ponds or ice.
+    if (float(lower_width)/max_bit >= 0.03) or (dynamic_range < max_bit / 3):
+        min_range = int(max_bit * .08)
+        if lower > min_range:
+            lower = min_range
+    # If there are at least 2 peaks we don't need an upper limit, as the upper
+    #   limit is only to prevent open water only images from being stretched.
+    if len(peaks) < 2:
+        max_range = int(max_bit * upper_limit)
+        if upper < max_range:
+            upper = max_range
 
     return lower, upper
-
-
-
-
-
-# def find_splitsize(total_cols, total_rows, col_splits, row_splits):
-#     """
-#     Determines the appropriate x (col) and y (row) dimensions for each
-#         image split. Total image size is rounded up to the nearest multiple
-#         of 100*#columns. This allows for easier creation of uniform image
-#         blocks, but the images will need to be padded with zeros to fit the
-#         increased size.
-#     """
-#     divisor = 100 * col_splits
-#     # Image dimension is rounded up (padded) to nearest 100*col_spits
-#     cols_pad = math.ceil(float(total_cols) / divisor) * divisor
-#     rows_pad = math.ceil(float(total_rows) / divisor) * divisor
-#     # Number of columns and rows in each split
-#     split_cols = int(cols_pad / col_splits)
-#     split_rows = int(rows_pad / row_splits)
-#
-#     return split_cols, split_rows
-# def find_blocksize_old(x_dim, y_dim, desired_size):
-#     """
-#     Finds the appropriate block size for an input image of a given dimensions.
-#     Method returns the first factor of the input dimension that is greater than
-#         the desired size.
-#     """
-#     # Just in case x_dim and y_dim are smaller than expected
-#     if x_dim < desired_size or y_dim < desired_size:
-#         block_x = x_dim
-#         block_y = y_dim
-#
-#     factors_x = factor(x_dim)
-#     factors_y = factor(y_dim)
-#     for x in factors_x:
-#         if x >= desired_size:
-#             block_x = x
-#             break
-#     for y in factors_y:
-#         if y >= desired_size:
-#             block_y = y
-#             break
-#
-#     return int(block_x), int(block_y)
-#
-#
-# def factor(number):
-#     """
-#     Returns a sorted list of all of the factors of number using trial division.
-#     source: http://www.calculatorsoup.com/calculators/math/factors.php
-#     """
-#     factors = []
-#     s = int(math.ceil(math.sqrt(number)))
-#
-#     for i in range(1, s):
-#         c = float(number) / i
-#         if int(c) == c:
-#             factors.append(c)
-#             factors.append(number / c)
-#     factors.sort()
-#
-#     return factors
-
-# def split_band(band, num_x, num_y, size_x, size_y):
-#     """
-#     Divides the input band into a list of num_x*num_y subregions (splits), each
-#         of size defined by size_x and size_y
-#     """
-#     # Pad the input band with zeros to fit with the desired number and size of
-#     #   image splits.
-#     padded_band = np.zeros([num_y * size_y, num_x * size_x])
-#     original_dims = np.shape(band)
-#     padded_band[0:original_dims[0], 0:original_dims[1]] = band
-#     band = None
-#
-#     # Create a list of image splits
-#     all_splits = []
-#     for y in range(num_y):
-#         for x in range(num_x):
-#             split = padded_band[y * size_y:(y + 1) * size_y, x * size_x:(x + 1) * size_x]
-#             all_splits.append(split)
-#
-#     return all_splits
-
-
-# def construct_blocks(image, block_cols, block_rows, pad_dim):
-#     """
-#     Creates a list of image blocks based on an input raster and desired block
-#         size.
-#     Block size needs to be a multiple of total raster dimensions.
-#     """
-#     # Pad the input band with zeros to fit with the desired number and size of
-#     #   image splits.
-#     padded_image = np.zeros(pad_dim)
-#     original_dim = np.shape(image)
-#     padded_image[0:original_dim[0], 0:original_dim[1]] = image
-#     image = None
-#
-#     num_block_cols = int(pad_dim[1] / block_cols)
-#     num_block_rows = int(pad_dim[0] / block_rows)
-#
-#     block_list = []
-#     # Append a 2d array of the image block to
-#     pad_amt = 100
-#     for y in range(num_block_rows):
-#         for x in range(num_block_cols):
-#             block_list.append(padded_image[(y * block_rows) : ((y + 1) * block_rows),
-#                                            (x * block_cols) : ((x + 1) * block_cols)])
-#     dimensions = [num_block_cols, num_block_rows]
-#     return block_list, dimensions
-
-
-# def write_to_hdf5(dst_file, image_data, band_num, image_type, image_date,
-#                   dimensions):
-#     """
-#     Writes the given image data to an hdf5 file.
-#     """
-#     # If the output file already exists, append the given data to that
-#     #   file. Otherwise, create a new file and add the attribute headers.
-#     if os.path.isfile(dst_file):
-#         outfile = h5py.File(dst_file, "r+")
-#     else:
-#         outfile = h5py.File(dst_file, "w")
-#         outfile.attrs.create("Image Type", image_type)
-#         outfile.attrs.create("Image Date", image_date)
-#         outfile.attrs.create("Block Dimensions", dimensions)
-#     # Catch collisions with existing datasets. If this dataset already exists,
-#     #   do nothing.
-#     try:
-#         outfile.create_dataset('original_' + str(band_num), data=image_data,
-#                                dtype='uint8', compression='gzip')
-#     except RuntimeError:
-#         pass
-#
-#     outfile.close()
 
 
 def save_color_image(image_data, output_name, image_type, block_cols, block_rows):
@@ -543,46 +358,6 @@ def downsample(band, factor):
             band_copy[i * factor:(i * factor) + factor, j * factor:j * factor + factor, :] = band_downsample[i, j, :]
 
     return band_copy
-
-
-def main():
-    # Set Up Arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input_dir",
-                        help="directory path for input image")
-    parser.add_argument("filename",
-                        help="name of image")
-    parser.add_argument("image_type", type=str, choices=['srgb', 'wv02_ms', 'pan'],
-                        help="image type: 'srgb', 'wv02_ms', 'pan'")
-    parser.add_argument("--output_dir", metavar="dir",
-                        help="directory path for output images")
-    parser.add_argument("-s", "--splits", type=int, default=9, metavar="int",
-                        help='''number of splits to perform on the input images.
-                        This is rounded to the nearest perfect square''')
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="display status updates")
-
-    # Moved from Splitter, but not implemented yet:
-    # parser.add_argument("--histogram", action="store_true",
-    #                    help="display histogram of pixel intensity values before segmentation")
-
-    # Parse Arguments
-    args = parser.parse_args()
-    input_path = os.path.abspath(args.input_dir)
-    image_name = args.filename
-    image_type = args.image_type
-    if args.output_dir:
-        output_path = os.path.abspath(args.output_dir)
-    else:
-        output_path = None
-    number_of_splits = args.splits
-    verbose = args.verbose
-
-    # Split Image with Given Arguments
-    prepare_image(input_path, image_name, image_type,
-                  output_path=output_path,
-                  number_of_splits=number_of_splits,
-                  verbose=verbose)
 
 
 if __name__ == "__main__":
