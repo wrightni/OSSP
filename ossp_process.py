@@ -218,6 +218,7 @@ def main():
         # Collect data from processes as they complete tasks
         finished_threads = 0
         while finished_threads < NUMBER_OF_PROCESSES:
+
             if not dst_queue.empty():
                 val = dst_queue.get()
                 if val == None:
@@ -239,6 +240,9 @@ def main():
                     dst_ds.FlushCache()
                     # Update the progress bar
                     if verbose: pbar.update()
+            # Give the other threads some time to finish their tasks.
+            else:
+                time.sleep(10)
 
 
         # Update the progress bar

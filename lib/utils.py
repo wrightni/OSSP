@@ -84,18 +84,18 @@ def create_task_list(src_dir, dst_dir):
             task.set_dst_dir(dst_dir)
 
         ## Check the output directory for completed files
-        if os.path.isdir(task.get_dst_dir()):
-            clsf_imgs = os.listdir(task.get_dst_dir())
-            # Finished images have a consistant naming structure:
-            target_name = image_name + '_classified.tif'
-            for img in clsf_imgs:
-                # Set this task to complete if we find the finished image
-                if img == target_name:
-                    task.mark_complete()
-
-            ## Skip to the next image if this task is complete
-            if task.is_complete():
-                continue
+        # if os.path.isdir(task.get_dst_dir()):
+        #     clsf_imgs = os.listdir(task.get_dst_dir())
+        #     # Finished images have a consistant naming structure:
+        #     target_name = image_name + '_classified.tif'
+        #     for img in clsf_imgs:
+        #         # Set this task to complete if we find the finished image
+        #         if img == target_name:
+        #             task.mark_complete()
+        #
+        #     ## Skip to the next image if this task is complete
+        #     if task.is_complete():
+        #         continue
 
         task_list.append(task)
 
