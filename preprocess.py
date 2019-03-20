@@ -359,6 +359,3 @@ def downsample(band, factor):
 
     return band_copy
 
-
-if __name__ == "__main__":
-    main()
