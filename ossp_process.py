@@ -71,6 +71,8 @@ def main():
     threads = args.threads
     verbose = args.verbose
     stretch = args.stretch
+    # White balance flag (To add as user option in future, presently only used on spring oib imagery)
+    white_balance = False
 
     # Use the given pansh script path, otherwise search for the correct folder
     #   in the same directory as this script.
@@ -145,6 +147,7 @@ def main():
         if image_type == 'srgb':
             if image_date <= 150:
                 tds_label = 'spring'
+                white_balance = True
             else:
                 tds_label = 'summer'
 
@@ -161,7 +164,7 @@ def main():
             stretch_params = pp.histogram_threshold(src_ds, image_type)
         else: # stretch == 'none':
             src_type = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
-            stretch_params = [1, 2**src_type - 1]
+            stretch_params = [1, 2**src_type - 1, [2**src_type - 1 for _ in range(src_ds.RasterCount)]]
 
         # Create a blank output image dataset
         # Save the classified image output as a geotiff
@@ -205,7 +208,7 @@ def main():
         NUMBER_OF_PROCESSES = threads
         block_procs = [Process(target=process_block_queue,
                                args=(lock, block_queue, dst_queue, full_image_name,
-                                     assess_quality, stretch_params, tds, metadata))
+                                     assess_quality, stretch_params, white_balance, tds, metadata))
                        for _ in range(NUMBER_OF_PROCESSES)]
 
         for proc in block_procs:
@@ -289,12 +292,13 @@ def construct_block_queue(block_size_x, block_size_y, x_dim, y_dim):
 
 
 def process_block_queue(lock, block_queue, dst_queue, full_image_name,
-                        assess_quality, stretch_params, tds, im_metadata):
+                        assess_quality, stretch_params, white_balance, tds, im_metadata):
     '''
     Function run by each process. Will process blocks placed in the block_queue until the 'STOP' command is reached.
     '''
     # Parse input arguments
-    lower, upper = stretch_params
+    lower, upper, wb_reference = stretch_params
+    wb_reference = np.array(wb_reference, dtype=np.float)
     image_type = im_metadata[0]
 
     for block_indices in iter(block_queue.get, 'STOP'):
@@ -319,6 +323,9 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
         # Apply correction to block based on earlier histogram analysis (if applying correction)
         # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
         image_data = pp.rescale_band(image_data, lower, upper)
+        if white_balance:
+            # Applies a white balance correction
+            image_data = pp.white_balance(image_data, wb_reference, np.amax(wb_reference))
 
         # Segment image
         segmented_blocks = segment_image(image_data, image_type=image_type)

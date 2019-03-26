@@ -27,6 +27,11 @@ def rescale_band(band, bottom, top):
     return rescale_intensity.rescale_intensity(band, imin, imax, omin, omax)
 
 
+def white_balance(band, reference, omax):
+
+    return rescale_intensity.white_balance(band, reference, omax)
+
+
 def run_pgc_pansharpen(script_path, input_filepath, output_dir):
 
     base_cmd = os.path.join(script_path, 'pgc_pansharpen.py')
@@ -138,13 +143,15 @@ def parse_metadata(metadata, image_type):
 
 def histogram_threshold(gdal_dataset, image_type):
     # Set the percentile thresholds at a temporary value until finding the
-    #   appropriate ones considering all three bands. These numbers are chosen to
+    #   appropriate ones considering all bands. These numbers are chosen to
     #   always get reset on first loop (for bitdepth <= uint16)
     lower = 2048
     upper = -1
 
     # Determine the number of bands in the dataset
     band_count = gdal_dataset.RasterCount
+    # White balance reference points
+    wb_reference = [0 for _ in range(band_count)]
 
     # First for loop finds the threshold based on all bands
     for b in range(1, band_count + 1):
@@ -167,9 +174,9 @@ def histogram_threshold(gdal_dataset, image_type):
         # Find the strongest (3) peaks in the band histogram
         peaks = find_peaks(hist, bin_centers)
         # Find the high and low threshold for rescaling image intensity
-        lower_b, upper_b = find_threshold(hist, bin_centers,
-                                          peaks, image_type)
-
+        lower_b, upper_b, auto_wb = find_threshold(hist, bin_centers,
+                                                    peaks, image_type)
+        wb_reference[b-1] = auto_wb
         # For sRGB we want to scale each band by the min and max of all
         #   bands. Check thresholds found for this band against any that
         #   have been previously found, and adjust if necessary.
@@ -178,7 +185,7 @@ def histogram_threshold(gdal_dataset, image_type):
         if upper_b > upper:
             upper = upper_b
 
-    return lower, upper
+    return lower, upper, wb_reference
 
 
 def find_peaks(hist, bin_centers):
@@ -192,7 +199,7 @@ def find_peaks(hist, bin_centers):
 
     # Roughly define the smallest acceptable size of a peak based on the number of pixels
     # in the largest bin.
-    min_count = int(max(hist)*.08)
+    min_count = int(max(hist)*.06)
 
     # First find all potential peaks in the histogram
     peaks = []
@@ -281,6 +288,9 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     lower = bin_centers[thresh_bot]
     upper = bin_centers[thresh_top]
 
+    # Save this value for the auto white balance function
+    auto_wb = upper
+
     # Determine the width of the lower peak.
     lower_width = min_peak - thresh_bot
     dynamic_range = max_peak - min_peak
@@ -298,7 +308,7 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
         upper_limit = 0.25
     else:
         max_bit = 255
-        upper_limit = 0.9
+        upper_limit = 0.8
 
     # If the width of the lowest peak is less than 3% of the bit depth,
     #   then the lower peak is likely open water. 3% determined visually, but
@@ -314,7 +324,7 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
         if upper < max_range:
             upper = max_range
 
-    return lower, upper
+    return lower, upper, auto_wb
 
 
 def save_color_image(image_data, output_name, image_type, block_cols, block_rows):
