@@ -72,7 +72,7 @@ def main():
     verbose = args.verbose
     stretch = args.stretch
     # White balance flag (To add as user option in future, presently only used on spring oib imagery)
-    white_balance = False
+    white_balance = True
 
     # Use the given pansh script path, otherwise search for the correct folder
     #   in the same directory as this script.

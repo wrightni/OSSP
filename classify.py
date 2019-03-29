@@ -75,7 +75,7 @@ def classify_block(image_block, watershed_block, image_type, image_date, rfc):
 
     ## If the block contains no data, set the classification values to 0
     if np.amax(image_block) < 2:
-        clsf_block = np.zeros(np.shape(image_block)[0:2])
+        clsf_block = np.zeros(np.shape(image_block)[1:3])
         return clsf_block
 
     ## We need the object labels to start at 0. This shifts the entire 

@@ -32,7 +32,7 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
 
     num_bands, x_dim, y_dim = np.shape(input_image)
 
-    feature_matrix = np.empty((num_ws,16), dtype=c_float)
+    feature_matrix = np.zeros((num_ws,16), dtype=c_float)
     cdef float [:, :] fm_view = feature_matrix
 
     #### Need to convert images to dtype c_int
@@ -47,6 +47,10 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
                                                                             num_ws, num_bands)
 
     for ws in range(num_ws):
+        # If there are no pixels associated with this watershed, skip this iteration
+        if internal[ws, 0, 0] < 1:
+            continue
+
         # Average and Variance of Pixel Intensity for each band
         for b in range(3):
             count = internal[ws, b, 0]

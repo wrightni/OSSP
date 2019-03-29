@@ -44,8 +44,8 @@ def segment_image(input_data, image_type=False):
         feature_separation = 1
         band_list = [4, 2, 1]
     else:   #image_type == 'srgb'
-        sobel_threshold = 0.03
-        amplification_factor = 3.1
+        sobel_threshold = 0.04
+        amplification_factor = 2.
         gauss_sigma = 2
         feature_separation = 5
         band_list = [0, 1, 2]
@@ -56,22 +56,22 @@ def segment_image(input_data, image_type=False):
     # Method that provides the user an option to view the original image
     #  side by side with the segmented image.
     # print(np.amax(segmented_data))
-    # image_data = np.array([input_data[band_list[0]],
-    #                        input_data[band_list[1]],
-    #                        input_data[band_list[2]]],
-    #                       dtype=np.uint8)
-    # ws_bound = segmentation.find_boundaries(segmented_data)
-    # ws_display = utils.create_composite(image_data)
-    #
-    # save_name = '/Users/nicholas/Desktop/original_{}.png'
-    # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
-    #
-    # ws_display[:, :, 0][ws_bound] = 240
-    # ws_display[:, :, 1][ws_bound] = 80
-    # ws_display[:, :, 2][ws_bound] = 80
-    #
-    # save_name = '/Users/nicholas/Desktop/seg_{}.png'
-    # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+    image_data = np.array([input_data[band_list[0]],
+                           input_data[band_list[1]],
+                           input_data[band_list[2]]],
+                          dtype=np.uint8)
+    ws_bound = segmentation.find_boundaries(segmented_data)
+    ws_display = utils.create_composite(image_data)
+
+    save_name = '/Users/nicholas/Desktop/original_{}.png'
+    mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+
+    ws_display[:, :, 0][ws_bound] = 240
+    ws_display[:, :, 1][ws_bound] = 80
+    ws_display[:, :, 2][ws_bound] = 80
+
+    save_name = '/Users/nicholas/Desktop/seg_{}.png'
+    mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
 
     return segmented_data
 
@@ -98,23 +98,27 @@ def watershed_transformation(image_data, band_list, sobel_threshold, amplificati
     #              & (image_data[2] == 0)] = True
 
     edge_image = edge_detect(image_data, band_list, gauss_sigma, amplification_factor, sobel_threshold)
+    grad_image = build_gradient(image_data, band_list, gauss_sigma)
     image_data = None
 
-    # Find local minimum values in the sobel image by inverting
-    #   sobel_image and finding the local maximum values
+    # Find local minimum values in the edge image by inverting
+    #   edge_image and finding the local maximum values
     inv_edge = np.empty_like(edge_image, dtype=np.uint8)
     np.subtract(255, edge_image, out=inv_edge)
 
-    local_min = feature.peak_local_max(inv_edge, min_distance=feature_separation,
-                                       indices=False, num_peaks_per_label=1)
+    distance_image = ndimage.distance_transform_edt(inv_edge)
     inv_edge = None
+
+    local_min = feature.peak_local_max(distance_image, min_distance=feature_separation,
+                                       indices=False, num_peaks_per_label=1)
+
     markers = ndimage.label(local_min)[0]
     local_min = None
 
     # Build a watershed from the markers on top of the edge image
-    im_watersheds = morphology.watershed(edge_image, markers)
+    im_watersheds = morphology.watershed(grad_image, markers)
     # Clear gradient image data
-    edge_image = None
+    grad_image = None
 
     # Set all values outside of the image area (empty pixels, usually caused by
     #   orthorectification) to one value, at the end of the watershed list.
@@ -123,37 +127,53 @@ def watershed_transformation(image_data, band_list, sobel_threshold, amplificati
     return im_watersheds
 
 
+def build_gradient(image_data, band_list, gauss_sigma):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        smooth_im_blue = ndimage.filters.gaussian_filter(image_data[band_list[2]], sigma=gauss_sigma)
+        grad_image = img_as_ubyte(filters.scharr(smooth_im_blue))
+
+    # Prevent the watersheds from 'leaking' along the sides of the image
+    grad_image[:, 0] = 255
+    grad_image[:, -1] = 255
+    grad_image[0, :] = 255
+    grad_image[-1, :] = 255
+
+    return grad_image
+
+
 def edge_detect(image_data, band_list, gauss_sigma, amplification_factor, sobel_threshold):
 
     # Apply a smoothing filter to remove noise and improve segmentation
-    smooth_im_blue = ndimage.filters.gaussian_filter(image_data[band_list[2]], sigma=gauss_sigma)
-    # Create a gradient image using a sobel filter
+    # smooth_im_blue = ndimage.filters.gaussian_filter(image_data[band_list[2]], sigma=gauss_sigma)
+    # Create a gradient image using a scharr filter
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        sobel_image_blue = img_as_ubyte(filters.scharr(smooth_im_blue))
+        # scharr_image_blue = img_as_ubyte(filters.scharr(smooth_im_blue))
+        scharr_image_blue = img_as_ubyte(feature.canny(image_data[band_list[2]], sigma=gauss_sigma))
     smooth_im_blue = None
 
-    # Do the same for the red band
-    smooth_im_red = ndimage.filters.gaussian_filter(image_data[band_list[0]], sigma=gauss_sigma)
+    # Use the red band to for a canny edge detection
+    # smooth_im_red = ndimage.filters.gaussian_filter(image_data[band_list[0]], sigma=gauss_sigma)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        sobel_image_red = img_as_ubyte(filters.scharr(smooth_im_red))
-    smooth_im_red = None
+        # sobel_image_red = img_as_ubyte(filters.scharr(smooth_im_red))
+        canny_image_red = img_as_ubyte(feature.canny(image_data[band_list[0]], sigma=gauss_sigma))
     image_data = None
 
-    # Find the absolute difference between the gradients in the blue and red image
-    diff_image = np.empty_like(sobel_image_blue, dtype=np.int8)
-    np.subtract(sobel_image_blue, sobel_image_red, out=diff_image)
+    # Find the absolute difference between the gradients image and the canny image
+    diff_image = np.empty_like(scharr_image_blue, dtype=np.int8)
+    np.subtract(scharr_image_blue, canny_image_red, out=diff_image)
     np.abs(diff_image, out=diff_image)
-    sobel_image_red = None
+    canny_image_red = None
 
-    # Add the differences to the blue gradient image
+    # Add the differences to the blue gradient image. This highlights important edges
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         diff_image = img_as_ubyte(diff_image)
-    sobel_image = np.empty_like(sobel_image_blue, dtype=np.uint8)
-    np.add(sobel_image_blue, diff_image, out=sobel_image)
-
+    edge_image = np.empty_like(scharr_image_blue, dtype=np.uint8)
+    np.add(scharr_image_blue, diff_image, out=edge_image)
     sobel_image_blue = None
     diff_image = None
 
@@ -162,21 +182,24 @@ def edge_detect(image_data, band_list, gauss_sigma, amplification_factor, sobel_
     if upper_threshold < 50:
         upper_threshold = 50
 
-    sobel_image = rescale_intensity.rescale_intensity(sobel_image, 0, upper_threshold, 0, 255)
+    # edge_image = rescale_intensity.rescale_intensity(edge_image, 0, upper_threshold, 0, 255)
     # sobel_image = exposure.rescale_intensity(sobel_image,
     #                                          in_range=(0, upper_threshold),
     #                                          out_range=np.uint8)
 
     # Prevent the watersheds from 'leaking' along the sides of the image
-    sobel_image[:, 0] = 255
-    sobel_image[:, -1] = 255
-    sobel_image[0, :] = 255
-    sobel_image[-1, :] = 255
+    edge_image[:, 0] = 255
+    edge_image[:, -1] = 255
+    edge_image[0, :] = 255
+    edge_image[-1, :] = 255
 
     # Set all values in the sobel image that are lower than the
     #   given threshold to zero.
-    sobel_threshold *= 255
-    sobel_image[sobel_image <= sobel_threshold] = 0
+    # sobel_threshold *= 255
+    # edge_image[edge_image <= sobel_threshold] = 0
+
+    save_name = '/Users/nicholas/Desktop/sobel_image_{}.png'
+    mimg.imsave(save_name.format(np.random.randint(0,100)), edge_image, format='png')
 
     gc.collect()
-    return sobel_image
+    return edge_image
