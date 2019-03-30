@@ -262,8 +262,9 @@ def main():
         output_csv = os.path.join(task.get_dst_dir(), image_name_noext + '_md.csv')
         with open(output_csv, "wb") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water"])
-            writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3]])
+            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water", "Shadow"])
+            writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2],
+                             pixel_counts[3], pixel_counts[4]])
 
         # Close the progress bar
         if verbose:
