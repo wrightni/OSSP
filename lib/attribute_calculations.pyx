@@ -84,6 +84,10 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
         histogram_i = internal_ext[ws]#[:last_index(internal_ext[ws])] #np.bincount(internal[1][ws])
         fm_view[ws, 10] = spstats.entropy(histogram_i, base=2)
 
+        # If there are no external pixels (usually when whole images is black)
+        # skip assigning these values.
+        if external[ws, 0, 0] < 1:
+            continue
         ## Neighborhood Values
         # N. Average Intensity
         n_mean = external[ws, 1, 1]
