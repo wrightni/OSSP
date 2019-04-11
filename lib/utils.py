@@ -3,13 +3,11 @@ import os
 import csv
 import math
 import itertools
-import sqlite3
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.image as mimg
-import glob
 from ctypes import *
 
 valid_extensions = ['.tif','.tiff','.jpg']
@@ -99,49 +97,6 @@ def create_task_list(src_dir, dst_dir):
         #         continue
 
         task_list.append(task)
-
-    return task_list
-
-
-def create_task_list_db(db_filepath):
-    '''
-    -----> Only selecting p002 for now, update this to process all parts!
-    Creates a task list from the given database. Variables are specific
-    to a custom implementation of a database and directory structure.
-    '''
-    base_dir = '/media/sequoia/DigitalGlobe/imagery'
-    out_dir = '/media/sequoia/DigitalGlobe/processed'
-    task_list = []
-
-    # Open the database
-    conn = sqlite3.connect(db_filepath)
-
-    # Select the images that need to be processed with a database query
-    cursor = conn.execute("SELECT NAME FROM DigitalGlobe WHERE CLOUD = 1 \
-                                                            AND SENSOR = 'Pan_MS1_MS2' \
-                                                            AND LOCAL = 1 \
-                                                            AND PART IS NULL")
-    for row in cursor:
-        image_id = row[0]
-
-        # Return a list of all MS .ntf files that match the image id
-        # -----> Only selecting p002 for now, update this to process all parts!
-        image_list = glob.glob('{}/*{}*M1BS*P002.ntf'.format(base_dir, image_id))
-
-        for image in image_list:
-            # Just in case there are any hidden files
-            if image[0] == '.':
-                continue
-
-            image_name = os.path.split(image)[-1]
-            # Add this image to the task list
-            new_task = Task(image_name, base_dir)
-            new_task.set_dst_dir(out_dir)
-
-            task_list.append(new_task)
-
-    # Close the database
-    conn.close()
 
     return task_list
 
@@ -271,54 +226,6 @@ def write_to_csv(csv_name, path, image_name, pixel_counts):
     except:
         print "error saving csv"
         print pixel_counts
-
-
-def write_to_database(db_filepath, image_id, part, pixel_counts):
-    '''
-    INPUT:
-        db_name: filename of the database
-        path: location where the database is stored
-        pixel_clounts: number of pixels in each classification category
-            [snow, gray, melt, water, shadow]
-
-    Writes the classification pixel counts to the database at the image_id entry
-    NOTES:
-        For now, this overwrites existing data.
-    FUTURE:
-        Develop method that checks for existing data and appends the current
-            data to that, record which parts contributed to the total.
-
-    '''
-
-    #part_num = os.path.splitext(image_name)[0].split('_')[-1]
-
-    # Convert pixel_counts into percentages and total area
-    area = 1  # Prevent division by 0
-    for i in range(len(pixel_counts)):
-        area +=  pixel_counts[i]
-    prcnt = []
-    for i in range(len(pixel_counts)):
-        prcnt.append(float(pixel_counts[i] / area))
-
-    # Convert area to square kilometers
-    # --> Get the pixel size from image metadata before implementing this conversion
-    # area = int((area * 0.25) / 1000000)
-
-    # Open the database
-    conn = sqlite3.connect(db_filepath)
-
-    # Update the entry at image_id with the given pixel counts
-    conn.execute("UPDATE DigitalGlobe \
-                 SET AREA = {0:d}, SNOW = {1:f}, GRAY = {2:f}, MP = {3:f}, \
-                     OW = {4:f}, PART = {5:s} \
-                 WHERE NAME = '{6:s}' \
-                ".format(int(area), prcnt[0], prcnt[1],
-                         prcnt[2]+prcnt[3], prcnt[4], part, image_id)
-                )
-    # Commit the changes
-    conn.commit()
-    # Close the database
-    conn.close()
 
 
 #### Recombine classified image splits
@@ -504,45 +411,3 @@ def create_composite(band_list, dtype=np.uint8):
         img[:,:,i] = band_list[i]
     
     return img
-
-# Plots a confusion matrix. Adapted from 
-# http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-selection-plot-confusion-matrix-py
-# 
-def plot_confusion_matrix(cm,categories,ylabel,xlabel,
-                            normalize=False,
-                            title='',
-                            cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
-    font = {'family' : 'Times New Roman',
-            'weight' : 'bold',
-            'size'   : 12}
-
-    matplotlib.rc('font', **font)
-
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    tick_marks = np.arange(len(categories))
-    plt.xticks(tick_marks, categories, rotation=45)
-    plt.yticks(tick_marks, categories)
-
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-
-    print(cm)
-
-    thresh = cm.max() / 4.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                horizontalalignment="center",
-                color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel(ylabel)
-    plt.xlabel(xlabel)
-    plt.show()

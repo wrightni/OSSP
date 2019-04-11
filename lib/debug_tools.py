@@ -164,3 +164,46 @@ def test_training(label_vector, training_feature_matrix):
     plt.xticks(range(training_feature_matrix.shape[1]), feature_names_sorted, rotation='45')
     plt.xlim([-1, training_feature_matrix.shape[1]])
     plt.show()
+
+
+# Plots a confusion matrix. Adapted from
+# http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-selection-plot-confusion-matrix-py
+#
+def plot_confusion_matrix(cm,categories,ylabel,xlabel,
+                            normalize=False,
+                            title='',
+                            cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    font = {'family' : 'Times New Roman',
+            'weight' : 'bold',
+            'size'   : 12}
+
+    matplotlib.rc('font', **font)
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    tick_marks = np.arange(len(categories))
+    plt.xticks(tick_marks, categories, rotation=45)
+    plt.yticks(tick_marks, categories)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    thresh = cm.max() / 4.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                horizontalalignment="center",
+                color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel(ylabel)
+    plt.xlabel(xlabel)
+    plt.show()

@@ -12,6 +12,7 @@ import preprocess as pp
 from segment import segment_image
 from classify import classify_image
 from lib import utils
+from lib import db_utils
 import gdal
 
 
@@ -82,6 +83,10 @@ def main():
         current_path = os.path.dirname(os.path.realpath(__file__))
         pansh_script_path = os.path.join(os.path.split(current_path)[0], 'imagery_utils')
 
+    ## FOR Server Processing
+    # Redirect stdout and sterr. fh is closed at end of script
+    fh, stdout_orig, stderr_orig = db_utils.redirect_output()
+
     # For Ames OIB Processing:
     if image_type == 'srgb':
         assess_quality = True
@@ -94,7 +99,8 @@ def main():
     #   list of task objects based on the files in the input directory.
     #   Each task is an image to process, and has a subtask for each split
     #   of that image. 
-    task_list = utils.create_task_list(os.path.join(src_dir, src_file), dst_dir)
+    # task_list = utils.create_task_list(os.path.join(src_dir, src_file), dst_dir)
+    task_list = db_utils.create_task_list_db('/media/sequoia/DigitalGlobe/ImageDatabase.db')
 
     for task in task_list:
 
@@ -127,6 +133,8 @@ def main():
             # Set the image name/dir to the pan output name/dir
             task.set_src_dir(task.get_dst_dir())
             task.change_id(pansh_filepath)
+            # From here on out we use the 'hist' settings
+            stretch = 'hist'
 
         # Open the image dataset with gdal
         full_image_name = os.path.join(task.get_src_dir(), task.get_id())
@@ -257,9 +265,6 @@ def main():
         for proc in block_procs:
             proc.join()
 
-        # Close dataset and write to disk
-        dst_ds = None
-
         # Write extra data (total pixel counts and quality score to the database (or csv)
         output_csv = os.path.join(task.get_dst_dir(), image_name_noext + '_md.csv')
         with open(output_csv, "wb") as csvfile:
@@ -268,10 +273,29 @@ def main():
             writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2],
                              pixel_counts[3], pixel_counts[4]])
 
+        # Writing the results to a sqlite database. (Only works for
+        #   a specific database structure that has already been created)
+        db_name = '/media/sequoia/DigitalGlobe/ImageDatabase.db'
+        image_name = task.get_id()
+        image_name = os.path.splitext(image_name)[0]
+        image_id = image_name.split('_')[2]
+        part = image_name.split('_')[5]
+        vcode = 'v2.2'
+        vtds = 'ms_v3'
+        gsd, cc = db_utils.corner_coord_transform(dst_ds)
+        db_utils.write_to_database(db_name, image_id, part, pixel_counts,
+                                   vcode, vtds, gsd, cc)
+
+        # Close dataset and write to disk
+        dst_ds = None
+
         # Close the progress bar
         if verbose:
             pbar.close()
             print "Finished Processing."
+
+    # Close the log file
+    fh.close()
 
 
 def construct_block_queue(block_size_x, block_size_y, x_dim, y_dim):
