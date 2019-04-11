@@ -38,12 +38,14 @@ def run_pgc_pansharpen(script_path, input_filepath, output_dir):
         input_filepath,
         output_dir)
 
+    log_file = os.path.join(output_dir, "2019_pansh.log")
+    log_fh = open(log_file, 'a')
     # Spawn a subprocess to execute the above command
     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                            stdout=log_fh, stderr=subprocess.STDOUT)
 
     proc.wait()
-
+    log_fh.close()
     # Copying PGC Naming convention, written to match above command
     basename = os.path.splitext(os.path.split(input_filepath)[-1])[0]
     pansh_filename = "{}_{}{}{}_pansh.tif".format(basename, 'u08', 'rf', '3413')
@@ -159,7 +161,8 @@ def histogram_threshold(gdal_dataset, src_dtype):
         band = gdal_dataset.GetRasterBand(b)
 
         # Find the min and max image values
-        bmin, bmax = band.ComputeRasterMinMax()
+        bmin = 1.0
+        bmax = 2**src_dtype - 1
 
         # Determine the histogram using gdal
         nbins = int(bmax - bmin)

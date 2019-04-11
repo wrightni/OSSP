@@ -17,6 +17,10 @@ def create_task_list_db(db_filepath):
     out_dir = '/media/sequoia/DigitalGlobe/processed'
     task_list = []
 
+    # Return a list of all MS .ntf files that are in the local folder
+    # -----> Only selecting p002 for now, update this to process all parts!
+    local_list = glob.glob('{}/*M1BS*P002.ntf'.format(base_dir))
+
     # Open the database
     conn = sqlite3.connect(db_filepath)
 
@@ -25,24 +29,26 @@ def create_task_list_db(db_filepath):
                                                             AND SENSOR = 'Pan_MS1_MS2' \
                                                             AND LOCAL = 1 \
                                                             AND QA IS NULL")
+
     for row in cursor:
         image_id = row[0]
 
         # Return a list of all MS .ntf files that match the image id
         # -----> Only selecting p002 for now, update this to process all parts!
-        image_list = glob.glob('{}/*{}*M1BS*P002.ntf'.format(base_dir, image_id))
+        # image_list = glob.glob('{}/*{}*M1BS*P002.ntf'.format(base_dir, image_id))
 
-        for image in image_list:
+        for image in local_list:
             # Just in case there are any hidden files
             if image[0] == '.':
                 continue
 
-            image_name = os.path.split(image)[-1]
-            # Add this image to the task list
-            new_task = Task(image_name, base_dir)
-            new_task.set_dst_dir(out_dir)
+            if image_id in image and 'P002' in image:
+                image_name = os.path.split(image)[-1]
+                # Add this image to the task list
+                new_task = Task(image_name, base_dir)
+                new_task.set_dst_dir(out_dir)
 
-            task_list.append(new_task)
+                task_list.append(new_task)
 
     # Close the database
     conn.close()
@@ -57,7 +63,7 @@ def redirect_output(folder):
     save_stdout = sys.stdout
     save_stderr = sys.stderr
 
-    fh = open(filename, 'w')
+    fh = open(filename, 'a')
     sys.stdout = fh
     sys.stderr = fh
 
@@ -104,13 +110,14 @@ def write_to_database(db_filepath, image_id, part, pixel_counts,
                   "SET AREA = {0:d}, SNOW = {1:f}, GRAY = {2:f}, MP = {3:f}, OW = {4:f}, " +
                   "UL = '({5:0.3f}, {6:0.3f})', LL = '({7:0.3f}, {8:0.3f})', " +
                   "UR = '({9:0.3f}, {10:0.3f})', LR = '({11:0.3f}, {12:0.3f})', " +
-                  "PART = '{13:s}', PDATE = '{14:s}', VCODE = '{15:s}', VTDS = '{16:s}' " +
+                  "PART = '{13:s}', PDATE = '{14:s}', VCODE = '{15:s}', VTDS = '{16:s}', QA = 0 " +
                   "WHERE NAME = '{17:s}'").format(area_km, prcnt[0], prcnt[1], prcnt[2], prcnt[3],
                                                  cc[0][0], cc[0][1], cc[1][0], cc[1][1],
                                                  cc[2][0], cc[2][1], cc[3][0], cc[3][1],
                                                  part, current_date, vcode, vtds,
                                                  image_id)
     print(update_cmd)
+    conn.execute(update_cmd)
     # Commit the changes
     conn.commit()
     # Close the database

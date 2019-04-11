@@ -3,9 +3,11 @@
 # Nicholas Wright
 
 import os
+import sys
 import time
 import argparse
 import csv
+import datetime
 import numpy as np
 from multiprocessing import Process, RLock, Queue
 import preprocess as pp
@@ -72,6 +74,7 @@ def main():
     threads = args.threads
     verbose = args.verbose
     stretch = args.stretch
+    stretch_orig = stretch
     # White balance flag (To add as user option in future, presently only used on spring oib imagery)
     white_balance = False
 
@@ -96,15 +99,24 @@ def main():
     # Set a default quality score until this value is calculated
     quality_score = 1.
 
+    print("Test redirected messaging.")
+    sys.stdout.flush()
+
     # Prepare a list of images to be processed based on the user input
     #   list of task objects based on the files in the input directory.
     #   Each task is an image to process, and has a subtask for each split
     #   of that image. 
     # task_list = utils.create_task_list(os.path.join(src_dir, src_file), dst_dir)
     task_list = db_utils.create_task_list_db('/media/sequoia/DigitalGlobe/ImageDatabase.db')
+    if verbose:
+        tracker = 0
+        num_tasks = len(task_list)
+        print("Number of tasks: {}".format(num_tasks))
 
     for task in task_list:
 
+        # Reset stretch flag
+        stretch = stretch_orig
         # ASP: Restrict processing to the frame range
         # try:
         #     frameNum = getFrameNumberFromFilename(file)
@@ -125,6 +137,7 @@ def main():
         if stretch == 'pansh':
             if verbose:
                 print("Orthorectifying and Pansharpening image...")
+                sys.stdout.flush()
 
             full_image_name = os.path.join(task.get_src_dir(), task.get_id())
             pansh_filepath = pp.run_pgc_pansharpen(pansh_script_path,
@@ -196,6 +209,7 @@ def main():
         block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
         if verbose:
             print("block size: [{},{}]".format(block_size_x, block_size_y))
+            sys.stdout.flush()
 
         # close the source dataset so that it can be loaded by each thread seperately
         src_ds = None
@@ -294,6 +308,8 @@ def main():
         if verbose:
             pbar.close()
             print "Finished Processing."
+            tracker += 1
+            print("{}/{}".format(tracker,num_tasks))
 
     # Close the log file
     fh.close()
