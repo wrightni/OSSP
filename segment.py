@@ -21,8 +21,9 @@ def segment_image(input_data, image_type=False):
     '''
  
     #### Define segmentation parameters
-    # Sobel_threshold: Gradient values below this threshold will be set to zero
-    # Amplification factor: Amount to scale gradient values by after threshold has been applied
+    # High_threshold:
+    # Low_threshold: Lower threshold for canny edge detection. Determines which "weak" edges to keep.
+    #   Values above this amount that are connected to a strong edge will be marked as an edge.
     # Gauss_sigma: sigma value to use in the gaussian blur applied to the image prior to segmentation.
     #   Value chosen here should be based on the quality and resolution of the image
     # Feature_separation: minimum distance, in pixels, between the center point of multiple features. Use a lower value
@@ -37,10 +38,10 @@ def segment_image(input_data, image_type=False):
         feature_separation = 1
         band_list = [0, 0, 0]
     elif image_type == 'wv02_ms':
-        high_threshold = 0.15 * 255    ## Needs to be checked
+        high_threshold = 0.20 * 255    ## Needs to be checked
         low_threshold = 0.05 * 255      ## Needs to be checked
         gauss_sigma = 1.5
-        feature_separation = 1
+        feature_separation = 3
         band_list = [4, 2, 1]
     else:   #image_type == 'srgb'
         high_threshold = 0.15 * 255
@@ -62,8 +63,8 @@ def segment_image(input_data, image_type=False):
     # ws_bound = segmentation.find_boundaries(segmented_data)
     # ws_display = utils.create_composite(image_data)
     #
-    # save_name = '/Users/nicholas/Desktop/original_{}.png'
-    # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+    # # save_name = '/Users/nicholas/Desktop/original_{}.png'
+    # # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
     #
     # ws_display[:, :, 0][ws_bound] = 240
     # ws_display[:, :, 1][ws_bound] = 80
@@ -89,7 +90,9 @@ def watershed_transformation(image_data, band_list, low_threshold, high_threshol
         # We just need the dimensions from one band
         return np.zeros(np.shape(image_data[0]))
 
+    # Build a raster of detected edges to inform the creation of watershed seed points
     edge_image = edge_detect(image_data, band_list, gauss_sigma, low_threshold, high_threshold)
+    # Build a raster of image gradient that will be the base for watershed expansion.
     grad_image = build_gradient(image_data, band_list, gauss_sigma)
     image_data = None
 
@@ -99,9 +102,11 @@ def watershed_transformation(image_data, band_list, low_threshold, high_threshol
     np.subtract(255, edge_image, out=inv_edge)
     edge_image = None
 
+    # Distance to the nearest detected edge
     distance_image = ndimage.distance_transform_edt(inv_edge)
     inv_edge = None
 
+    # Local maximum distance
     local_min = feature.peak_local_max(distance_image, min_distance=feature_separation,
                                        exclude_border=False, indices=False, num_peaks_per_label=1)
     distance_image = None
@@ -127,7 +132,6 @@ def edge_detect(image_data, band_list, gauss_sigma, low_threshold, high_threshol
         warnings.simplefilter("ignore")
         edge_image = img_as_ubyte(feature.canny(image_data[band_list[1]], sigma=gauss_sigma,
                                                 low_threshold=low_threshold, high_threshold=high_threshold))
-
     return edge_image
 
 
@@ -145,5 +149,3 @@ def build_gradient(image_data, band_list, gauss_sigma):
     grad_image[-1, :] = grad_image[-2, :]
 
     return grad_image
-
-

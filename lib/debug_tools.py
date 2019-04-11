@@ -111,6 +111,18 @@ def display_histogram(image_band):
 def test_training(label_vector, training_feature_matrix):
 
     print "Size of training set: %i" %len(label_vector)
+    print(np.shape(training_feature_matrix))
+
+    # Add a random number to the training data as a reference point
+    # Anything less important than a random number is obviously useless
+    tfm_new = []
+    for i in range(len(training_feature_matrix)):
+        tf = training_feature_matrix[i]
+        tf.append(np.random.rand(1)[0])
+        tfm_new.append(tf)
+
+    training_feature_matrix = tfm_new
+    print(np.shape(training_feature_matrix))
 
     rfc = RandomForestClassifier(n_estimators=100,oob_score=True)
     rfc.fit(training_feature_matrix, label_vector)
@@ -121,11 +133,13 @@ def test_training(label_vector, training_feature_matrix):
     std = np.std([tree.feature_importances_ for tree in rfc.estimators_],
                 axis=0)
 
-    feature_names = ['Mean Intensity','Median\nIntensity','Standard\nDeviation','Segment Size','Entropy',
-                        'Neighbor\nMean Intensity','Neighbor\nStandard\nDeviation','Neighbor\nMaximum',
-                        'Neighbor\nEntropy','Date']
+    feature_names = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8', 'std7', 'b1/b3', 'b2/b7', 'b4/b7',
+                     'ex.b4', 'ex.b8', r'$\frac{b1-b7}{b1+b7}$', r'$\frac{b3-b5}{b3+b5}$',
+                     'wb.b1', 'wb.b2', 'wb.b3', 'wb.b4', 'wb.b5', 'wb.b6', 'wb.b7',
+                     'bp.b1', 'bp.b2', 'bp.b3', 'bp.b4', 'bp.b5', 'bp.b6', 'bp.b7', 'bp.b8', 'random']
 
-    feature_names = range(len(training_feature_matrix))
+    print(len(feature_names))
+    # feature_names = range(len(training_feature_matrix))
 
     indices = np.argsort(importances)[::-1]
 
@@ -146,6 +160,7 @@ def test_training(label_vector, training_feature_matrix):
     plt.bar(range(training_feature_matrix.shape[1]), importances[indices],
             color=[.161,.333,.608], yerr=std[indices], align="center", 
             error_kw=dict(ecolor=[.922,.643,.173], lw=2, capsize=3, capthick=2))
-    plt.xticks(range(training_feature_matrix.shape[1]), feature_names_sorted)#, rotation='45')
+    # plt.xticks(range(training_feature_matrix.shape[1]), feature_names_sorted)#, rotation='45')
+    plt.xticks(range(training_feature_matrix.shape[1]), feature_names_sorted, rotation='45')
     plt.xlim([-1, training_feature_matrix.shape[1]])
     plt.show()

@@ -109,64 +109,99 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     return np.copy(fm_view)
 
 
-def analyze_ms_image(input_image, watershed_image, segment_id=False):
+def analyze_ms_image(input_image, watershed_image, wb_ref, bp_ref, segment_id=False):
     '''
     Cacluate the attributes for each segment given in watershed_image
     using the raw pixel values in input image. Attributes calculated for
     multispectral type WorldView 2 images.
     '''
     cdef int num_bands, x_dim, y_dim
-    cdef int ws, b
+    cdef int ws, b, sid
     cdef int num_ws
+    cdef double mean, n_mean, M2, variance, count
+    cdef double wb_point, wb_rel, bp_point, bp_rel
 
-    num_bands, x_dim, y_dim = np.shape(input_image)
-    # If no segment id is provided, analyze the features for every watershed
-    # in the input image. If a segment id is provided, just analyze the features
-    # for that one segment.
+    # If no segment id was given, set sn to zero to signal pixel_sort that
+    #   all segments should be analyzed. Otherwise only the segment with
+    #   the number == sn will be processed
     # We have to add +1 to num_ws because if the maximum value in watershed_image
     # is 500, then there are 501 total watersheds Sum(0,1,...,499,500) = 500+1
     if segment_id == False:
         num_ws = int(np.amax(watershed_image) + 1)
+        sid = 0
     else:
         num_ws = 1
+        sid = segment_id
 
-    feature_matrix = np.empty((num_ws, 18), dtype=c_float)
+    num_bands, x_dim, y_dim = np.shape(input_image)
+
+    internal, external, internal_ext, external_ext = pixel_sort_extended(input_image, watershed_image,
+                                                                         sid, x_dim, y_dim,
+                                                                         num_ws, num_bands)
+
+    feature_matrix = np.zeros((num_ws, 31), dtype=c_float)
     cdef float[:, :] fm_view = feature_matrix
+    cdef float[:, :, :] in_view = internal
+    cdef float[:, :, :] ex_view = external
 
-    # Choose how to sort pixels based
-    if segment_id is not False:
-        internal, external = selective_pixel_sort(input_image, watershed_image,
-                                    x_dim, y_dim, num_bands, segment_id)
-    else:
-        internal, external = pixel_sort(input_image, watershed_image,
-                                    x_dim, y_dim, num_ws, num_bands)
+    # wb_ref = wb_ref
+    # for b in range(8):
+    #     wb_ref[b] = wb_reference[b]
 
     for ws in range(num_ws):
+        # If there are no pixels associated with this watershed, skip this iteration
+        if in_view[ws, 0, 0] < 1:
+            continue
+
         # Average Pixel Intensity of each band
         for b in range(8):
-            mean = internal[ws, b, 1]
+            count = in_view[ws, b, 0]
+            mean = in_view[ws, b, 1]            
             if mean < 1:
                 mean = 1
             fm_view[ws, b] = mean
+        
+        # Variance of band 7 (emperically the most useful)
+        count = in_view[ws, 6, 0]
+        M2 = in_view[ws, 6, 2]
+        variance = M2 / count
+        fm_view[ws, 8] = variance**(1./2) #11 14 15 13 8 9 12 10
 
         # Important band ratios
-        fm_view[ws, 8] = fm_view[ws, 0] / fm_view[ws, 2]
-        fm_view[ws, 9] = fm_view[ws, 1] / fm_view[ws, 6]
-        fm_view[ws, 10] = fm_view[ws, 4] / fm_view[ws, 6]
-        fm_view[ws, 11] = fm_view[ws, 3] / fm_view[ws, 5]
-        fm_view[ws, 12] = fm_view[ws, 3] / fm_view[ws, 6]
-        fm_view[ws, 13] = fm_view[ws, 3] / fm_view[ws, 7]
-        fm_view[ws, 14] = fm_view[ws, 4] / fm_view[ws, 6]
+        fm_view[ws, 9] = fm_view[ws, 0] / fm_view[ws, 2]
+        fm_view[ws, 10] = fm_view[ws, 1] / fm_view[ws, 6] #
+        #fm_view[ws, 18] = fm_view[ws, 4] / fm_view[ws, 6] #
+        #fm_view[ws, 19] = fm_view[ws, 3] / fm_view[ws, 5] #
+        fm_view[ws, 11] = fm_view[ws, 3] / fm_view[ws, 6]
+        #fm_view[ws, 21] = fm_view[ws, 3] / fm_view[ws, 7] #
+        #fm_view[ws, 22] = fm_view[ws, 4] / fm_view[ws, 6] #
 
-        # N. Average Intensity
-        n_mean = external[ws, 4, 1]
-        fm_view[ws, 15] = n_mean
+        # If there are no external pixels (usually when whole images is black)
+        # skip assigning this value.
+        if ex_view[ws, 4, 0] >= 1:
+            # N. Average Intensity
+            n_mean = ex_view[ws, 3, 1]
+            fm_view[ws, 12] = n_mean
+            n_mean = ex_view[ws, 7, 1]
+            fm_view[ws, 13] = n_mean
 
         # b1-b7 / b1+b7
-        fm_view[ws, 16] = ((fm_view[ws, 0] - fm_view[ws, 6]) / (fm_view[ws, 0] + fm_view[ws, 6]))
+        fm_view[ws, 14] = ((fm_view[ws, 0] - fm_view[ws, 6]) / (fm_view[ws, 0] + fm_view[ws, 6]))
 
         # b3-b5 / b3+b5
-        fm_view[ws, 17] = ((fm_view[ws, 2] - fm_view[ws, 4]) / (fm_view[ws, 2] + fm_view[ws, 4]))
+        fm_view[ws, 15] = ((fm_view[ws, 2] - fm_view[ws, 4]) / (fm_view[ws, 2] + fm_view[ws, 4]))
+
+        # Relative to the white balance point (b8 ignored emperically)
+        for b in range(7):
+            wb_point = wb_ref[b]
+            wb_rel = fm_view[ws, b] / wb_point
+            fm_view[ws, 16+b] = wb_rel #35
+
+        # Relative to the dark reference point
+        for b in range(8):
+            bp_point = bp_ref[b]
+            bp_rel = fm_view[ws, b] / bp_point
+            fm_view[ws, 23+b] = bp_rel #35
 
     return np.copy(fm_view)
 
@@ -182,32 +217,26 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
     cdef int num_ws
     cdef int x_dim, y_dim, num_bands
     cdef double features[12]
-    cdef int ws, b
-    # cdef int histogram_i
-    # cdef int histogram_e
+    cdef int ws, b, sid
    
-    # If no segment id is provided, analyze the features for every watershed
-    # in the input image. If a segment id is provided, just analyze the features
-    # for that one segment.
+    # If no segment id was given, set sn to zero to signal pixel_sort that
+    #   all segments should be analyzed. Otherwise only the segment with
+    #   the number == sn will be processed
     # We have to add +1 to num_ws because if the maximum value in watershed_image
     # is 500, then there are 501 total watersheds Sum(0,1,...,499,500) = 500+1
+
     if segment_id == False:
         num_ws = int(np.amax(watershed_image) + 1)
+        sid = 0
     else:
         num_ws = 1
+        sid = segment_id
 
     x_dim, y_dim, num_bands = np.shape(input_image)
 
-   #### Need to convert images to dtype c_int
-    # input_image = np.ndarray.astype(input_image, c_int)
-    # watershed_image = np.ndarray.astype(watershed_image, c_int)
-    if segment_id is not False:
-        internal, external = selective_pixel_sort(input_image, watershed_image,
-                                    x_dim, y_dim, num_bands, segment_id)
-    else:
-        internal, external = pixel_sort(input_image, watershed_image,
-                                        x_dim, y_dim,
-                                        num_ws, num_bands)
+    internal, external = pixel_sort(input_image, watershed_image,
+                                    sid, x_dim, y_dim,
+                                    num_ws, num_bands)
 
     for ws in range(num_ws):
         
@@ -256,60 +285,9 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
     return feature_matrix
 
 
-def selective_pixel_sort(unsigned char[:,:,:] intensity_image_view,
-                         unsigned int[:,:] label_image_view,
-                         int x_dim, int y_dim, 
-                         int num_bands, int label):
-    
-    cdef int y,x,i,w,b
-    cdef int window[4]
-    cdef int sn
-
-    # Output variables. 
-    #  Future work: Improve data structure here to something more efficient.
-    internal = [[[]] for _ in range(num_bands)]
-    external = [[[]] for _ in range(num_bands)]
-
-    # Moving window that defines the neighboring region for each pixel
-    window = [-4, -3, 3, 4]
-
-    for y in range(y_dim):
-        for x in range(x_dim):
-            # Set the current segment number
-            sn = label_image_view[x, y]
-
-            # Select only the ws with the correct label
-            if sn != label:
-                continue
-
-            # Assign the internal pixel
-            for b in range(num_bands):
-                internal[b][0].append(intensity_image_view[b, x, y])
-
-            # Determine the external values within the window
-            for w in range(4):
-                i = window[w]
-                # Determine the external values in the x-axis
-                # Check for edge conditions
-                if (x+i < 0) or (x+i >= x_dim):
-                    continue
-                if label_image_view[x+i, y] != sn:
-                    for b in range(num_bands):
-                        external[b][0].append(intensity_image_view[b, x+i, y])
-                # Determine the external values in the y-axis
-                # Check for edge conditions
-                if (y+i < 0) or (y+i >= y_dim):
-                    continue
-                if label_image_view[x, y+i] != sn:
-                    for b in range(num_bands):
-                        external[b][0].append(intensity_image_view[b, x, y+i])
-
-    return internal, external
-
-
 def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
                const unsigned int[:,:] label_image_view,
-               int x_dim, int y_dim, int num_ws, int num_bands):
+               int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
     pixels into a list of internal and external intensity pixels for every
@@ -343,6 +321,16 @@ def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
 
             # Set the current segment number
             sn = label_image_view[x, y]
+
+            # If a segment_id was given
+            # Select only the ws with the correct label.
+            #    set sn to zero to index in_view properly
+            if segment_id != 0:
+                if segment_id == sn:
+                    sn = 0
+                else:
+                    continue
+
             # Assign the internal pixel
             for b in range(num_bands):
                 # Find the new pixel
@@ -420,7 +408,7 @@ def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
 
 def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
                         const unsigned int[:,:] label_image_view,
-                        int x_dim, int y_dim, int num_ws, int num_bands):
+                        int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
     pixels into a list of internal and external intensity pixels for every
@@ -461,6 +449,16 @@ def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
 
             # Set the current segment number
             sn = label_image_view[x, y]
+
+            # If a segment_id was given
+            # Select only the ws with the correct label.
+            #    set sn to zero to index properly
+            if segment_id != 0:
+                if segment_id == sn:
+                    sn = 0
+                else:
+                    continue
+
             # Assign the internal pixel
             for b in range(num_bands):
                 # Find the new pixel

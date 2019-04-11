@@ -16,7 +16,7 @@ def rescale_intensity(src_ds, int imin, int imax, int omin, int omax):
 
 def white_balance(src_ds, reference, double imax):
     '''
-    src_ds: input image to balance
+    src_ds: input image to balance (ndim must == 3)
     reference: array of length equal to src_ds dim 0, image will be scaled by this reference
     '''
     cdef int x, y, b

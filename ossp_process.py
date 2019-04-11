@@ -159,12 +159,14 @@ def main():
         y_dim = src_ds.RasterYSize
         desired_block_size = 6400
 
+        src_dtype = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
         # Analyze input image histogram (if applying correction)
         if stretch == 'hist':
-            stretch_params = pp.histogram_threshold(src_ds, image_type)
+            stretch_params = pp.histogram_threshold(src_ds, src_dtype)
         else: # stretch == 'none':
-            src_type = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
-            stretch_params = [1, 2**src_type - 1, [2**src_type - 1 for _ in range(src_ds.RasterCount)]]
+            stretch_params = [1, 2**src_dtype - 1,
+                              [2 ** src_dtype - 1 for _ in range(src_ds.RasterCount)],
+                              [0 for _ in range(src_ds.RasterCount)]]
 
         # Create a blank output image dataset
         # Save the classified image output as a geotiff
@@ -298,8 +300,9 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
     Function run by each process. Will process blocks placed in the block_queue until the 'STOP' command is reached.
     '''
     # Parse input arguments
-    lower, upper, wb_reference = stretch_params
+    lower, upper, wb_reference, bp_reference = stretch_params
     wb_reference = np.array(wb_reference, dtype=np.float)
+    bp_reference = np.array(bp_reference, dtype=np.float)
     image_type = im_metadata[0]
 
     for block_indices in iter(block_queue.get, 'STOP'):
@@ -333,7 +336,7 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
 
         # Classify image
         classified_block = classify_image(image_data, segmented_blocks,
-                                          tds, im_metadata)
+                                          tds, im_metadata, wb_reference, bp_reference)
 
         # Add the pixel counts from this classified split to the
         #   running total.

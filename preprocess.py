@@ -5,15 +5,12 @@
 # Nicholas Wright
 # 11/30/17
 
-import argparse
 import os
-import math
 import datetime
 import subprocess
 import numpy as np
 import matplotlib.image as mimg
 from skimage.measure import block_reduce
-from skimage import exposure
 from lib import utils, rescale_intensity
 
 
@@ -141,7 +138,7 @@ def parse_metadata(metadata, image_type):
     return doy
 
 
-def histogram_threshold(gdal_dataset, image_type):
+def histogram_threshold(gdal_dataset, src_dtype):
     # Set the percentile thresholds at a temporary value until finding the
     #   appropriate ones considering all bands. These numbers are chosen to
     #   always get reset on first loop (for bitdepth <= uint16)
@@ -152,6 +149,8 @@ def histogram_threshold(gdal_dataset, image_type):
     band_count = gdal_dataset.RasterCount
     # White balance reference points
     wb_reference = [0 for _ in range(band_count)]
+    bp_reference = [0 for _ in range(band_count)]
+    # Determine the input datatype
 
     # First for loop finds the threshold based on all bands
     for b in range(1, band_count + 1):
@@ -174,9 +173,10 @@ def histogram_threshold(gdal_dataset, image_type):
         # Find the strongest (3) peaks in the band histogram
         peaks = find_peaks(hist, bin_centers)
         # Find the high and low threshold for rescaling image intensity
-        lower_b, upper_b, auto_wb = find_threshold(hist, bin_centers,
-                                                    peaks, image_type)
+        lower_b, upper_b, auto_wb, auto_bpr = find_threshold(hist, bin_centers,
+                                                            peaks, src_dtype)
         wb_reference[b-1] = auto_wb
+        bp_reference[b-1] = auto_bpr
         # For sRGB we want to scale each band by the min and max of all
         #   bands. Check thresholds found for this band against any that
         #   have been previously found, and adjust if necessary.
@@ -185,7 +185,7 @@ def histogram_threshold(gdal_dataset, image_type):
         if upper_b > upper:
             upper = upper_b
 
-    return lower, upper, wb_reference
+    return lower, upper, wb_reference, bp_reference
 
 
 def find_peaks(hist, bin_centers):
@@ -199,7 +199,8 @@ def find_peaks(hist, bin_centers):
 
     # Roughly define the smallest acceptable size of a peak based on the number of pixels
     # in the largest bin.
-    min_count = int(max(hist)*.06)
+    # min_count = int(max(hist)*.06)
+    min_count = int(np.sum(hist)*.004)
 
     # First find all potential peaks in the histogram
     peaks = []
@@ -257,7 +258,7 @@ def find_peaks(hist, bin_centers):
     return peaks
 
 
-def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
+def find_threshold(hist, bin_centers, peaks, src_dtype, top=0.15, bottom=0.5):
     """
     Finds the upper and lower threshold for histogram stretching.
     Using the indices of the highest and lowest peak (by intensity, not # of pixels), this searches for an upper
@@ -288,8 +289,10 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     lower = bin_centers[thresh_bot]
     upper = bin_centers[thresh_top]
 
-    # Save this value for the auto white balance function
+    # Save the upper value for the auto white balance function
     auto_wb = upper
+    # Save the lower value for the black point reference
+    auto_bpr = lower
 
     # Determine the width of the lower peak.
     lower_width = min_peak - thresh_bot
@@ -303,7 +306,7 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
     # While WV images are 11bit, white ice tends to be ~600-800 intensity
     # Provide a floor and ceiling to the amount of stretch allowed
     # if len(peaks) < 3:
-    if image_type == 'pan' or image_type == 'wv02_ms':
+    if src_dtype > 8:
         max_bit = 2047
         upper_limit = 0.25
     else:
@@ -324,7 +327,7 @@ def find_threshold(hist, bin_centers, peaks, image_type, top=0.15, bottom=0.5):
         if upper < max_range:
             upper = max_range
 
-    return lower, upper, auto_wb
+    return lower, upper, auto_wb, auto_bpr
 
 
 def save_color_image(image_data, output_name, image_type, block_cols, block_rows):

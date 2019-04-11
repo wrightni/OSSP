@@ -2426,12 +2426,12 @@ static PyObject *__pyx_pf_3lib_17rescale_intensity_rescale_intensity(CYTHON_UNUS
  * 
  * def white_balance(src_ds, reference, double imax):             # <<<<<<<<<<<<<<
  *     '''
- *     src_ds: input image to balance
+ *     src_ds: input image to balance (ndim must == 3)
  */
 
 /* Python wrapper */
 static PyObject *__pyx_pw_3lib_17rescale_intensity_3white_balance(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_3lib_17rescale_intensity_2white_balance[] = "\n    src_ds: input image to balance\n    reference: array of length equal to src_ds dim 0, image will be scaled by this reference\n    ";
+static char __pyx_doc_3lib_17rescale_intensity_2white_balance[] = "\n    src_ds: input image to balance (ndim must == 3)\n    reference: array of length equal to src_ds dim 0, image will be scaled by this reference\n    ";
 static PyMethodDef __pyx_mdef_3lib_17rescale_intensity_3white_balance = {"white_balance", (PyCFunction)(void*)(PyCFunctionWithKeywords)__pyx_pw_3lib_17rescale_intensity_3white_balance, METH_VARARGS|METH_KEYWORDS, __pyx_doc_3lib_17rescale_intensity_2white_balance};
 static PyObject *__pyx_pw_3lib_17rescale_intensity_3white_balance(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_src_ds = 0;
@@ -2964,7 +2964,7 @@ static PyObject *__pyx_pf_3lib_17rescale_intensity_2white_balance(CYTHON_UNUSED 
  * 
  * def white_balance(src_ds, reference, double imax):             # <<<<<<<<<<<<<<
  *     '''
- *     src_ds: input image to balance
+ *     src_ds: input image to balance (ndim must == 3)
  */
 
   /* function exit code */
@@ -18017,7 +18017,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  * 
  * def white_balance(src_ds, reference, double imax):             # <<<<<<<<<<<<<<
  *     '''
- *     src_ds: input image to balance
+ *     src_ds: input image to balance (ndim must == 3)
  */
   __pyx_tuple__22 = PyTuple_Pack(15, __pyx_n_s_src_ds, __pyx_n_s_reference, __pyx_n_s_imax, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_b, __pyx_n_s_x_dim, __pyx_n_s_y_dim, __pyx_n_s_num_bands, __pyx_n_s_val, __pyx_n_s_new_val, __pyx_n_s_src_view, __pyx_n_s_dst_ds, __pyx_n_s_dst_view, __pyx_n_s_ref_view); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__22);
@@ -18493,7 +18493,7 @@ if (!__Pyx_RefNanny) {
  * 
  * def white_balance(src_ds, reference, double imax):             # <<<<<<<<<<<<<<
  *     '''
- *     src_ds: input image to balance
+ *     src_ds: input image to balance (ndim must == 3)
  */
   __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_3lib_17rescale_intensity_3white_balance, NULL, __pyx_n_s_lib_rescale_intensity); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
