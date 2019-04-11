@@ -85,7 +85,8 @@ def main():
 
     ## FOR Server Processing
     # Redirect stdout and sterr. fh is closed at end of script
-    fh, stdout_orig, stderr_orig = db_utils.redirect_output()
+    log_folder = '/media/sequoia/DigitalGlobe/processed'
+    fh, stdout_orig, stderr_orig = db_utils.redirect_output(log_folder)
 
     # For Ames OIB Processing:
     if image_type == 'srgb':
