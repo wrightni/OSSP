@@ -1,7 +1,6 @@
 import os
 import glob
 import datetime
-import gdal
 import sys
 from osgeo import osr
 import sqlite3
@@ -129,7 +128,6 @@ def corner_coord_transform(src_dataset):
     rows = src_dataset.RasterYSize
     ext = GetExtent(gt, cols, rows)
     gsd = (gt[1] - gt[5]) / 2.0
-    print(gt[1],gt[5])
 
     src_srs = osr.SpatialReference()
     src_srs.ImportFromWkt(src_dataset.GetProjection())
