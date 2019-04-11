@@ -209,6 +209,7 @@ def main():
         block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
         if verbose:
             print("block size: [{},{}]".format(block_size_x, block_size_y))
+            print(stretch_params)
             sys.stdout.flush()
 
         # close the source dataset so that it can be loaded by each thread seperately

@@ -203,7 +203,7 @@ def find_peaks(hist, bin_centers):
     # Roughly define the smallest acceptable size of a peak based on the number of pixels
     # in the largest bin.
     # min_count = int(max(hist)*.06)
-    min_count = int(np.sum(hist)*.004)
+    min_count = int(np.sum(hist)*.002)
 
     # First find all potential peaks in the histogram
     peaks = []
