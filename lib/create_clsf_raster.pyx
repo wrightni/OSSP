@@ -3,23 +3,23 @@ from ctypes import *
 import skimage.morphology as morph
 
 
-def create_clsf_raster(int [:] prediction,
-                       int [:,:,:] intensity_image_view,
-                       int [:,:] label_image_view):
+def create_clsf_raster(int[:] prediction,
+                       unsigned char[:,:,:] intensity_image_view,
+                       unsigned int[:,:] label_image_view):
     '''
     Transfer classified results from a list of segment:classification pairs
         to a raster where pixel values are the classification result. 
     '''
     cdef int num_ws
-    cdef int y,x
+    cdef int y, x
     cdef int x_dim, y_dim
     cdef int band_list[3]
 
     # Create a blank image that we will assign values based on the prediction for each
     #   watershed.
-    x_dim, y_dim, num_bands = np.shape(intensity_image_view)
-    clsf_block = np.empty((x_dim,y_dim), dtype=c_int)
-    cdef int [:, :] clsf_block_view = clsf_block
+    num_bands, x_dim, y_dim = np.shape(intensity_image_view)
+    clsf_block = np.empty((x_dim,y_dim), dtype=c_byte)
+    cdef char [:, :] clsf_block_view = clsf_block
     
     # Watershed indexes start at 0, so we have to add 1 to get the number. 
     num_ws = np.amax(label_image_view) + 1
@@ -34,9 +34,9 @@ def create_clsf_raster(int [:] prediction,
         for y in range(y_dim):
             for x in range(x_dim):
                 # Setting the empty pixels (at least 3 bands have values of 0) to 0
-                if ((intensity_image_view[x,y,band_list[0]] == 0)
-                    & (intensity_image_view[x,y,band_list[1]] == 0)
-                    & (intensity_image_view[x,y,band_list[2]] == 0)):
+                if ((intensity_image_view[band_list[0], x, y] == 0)
+                    & (intensity_image_view[band_list[1], x, y] == 0)
+                    & (intensity_image_view[band_list[2], x, y] == 0)):
                     clsf_block_view[x,y] = 0
                 else:
                     clsf_block_view[x,y] = prediction[label_image_view[x,y]]
@@ -45,9 +45,9 @@ def create_clsf_raster(int [:] prediction,
         for y in range(y_dim):
             for x in range(x_dim):
                 # Set the empty pixels (at least 3 bands have values of 0) to 0
-                if ((intensity_image_view[x,y,band_list[0]] == 0)
-                    & (intensity_image_view[x,y,band_list[1]] == 0)
-                    & (intensity_image_view[x,y,band_list[2]] == 0)):
+                if ((intensity_image_view[band_list[0], x, y] == 0)
+                    & (intensity_image_view[band_list[1], x, y] == 0)
+                    & (intensity_image_view[band_list[2], x, y] == 0)):
                     clsf_block_view[x,y] = 0
                 else:
                     clsf_block_view[x,y] = prediction[0]

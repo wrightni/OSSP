@@ -12,7 +12,6 @@ import matplotlib.image as mimg
 import glob
 from ctypes import *
 
-
 valid_extensions = ['.tif','.tiff','.jpg']
 
 class Task:
@@ -63,49 +62,43 @@ def create_task_list(src_dir, dst_dir):
             task.set_dst_dir(dst_dir)
         return [task]
 
-    for path_, directories, files in os.walk(src_dir):
+    # Loop through contents of the given directory
+    for file in os.listdir(src_dir):
 
-        # Skip hidden directories
-        if path_[0] == '.':
+        # Skip hidden files
+        if file[0] == '.':
             continue
 
-        # Loop through contents in the current directory
-        for file in files:
+        image_name,ext = os.path.splitext(file)
+        # Check that the file is .tif or .jpg format
+        ext = ext.lower()
+        if ext not in valid_extensions:
+            continue
 
-            # Skip hidden files
-            if file[0] == '.':
-                continue
+        ## Create the task object for this image
+        task = Task(file, src_dir)
 
-            image_name,ext = os.path.splitext(file)
-            # Check that the file is .tif or .jpg format
-            ext = ext.lower()
-            if ext not in valid_extensions:
-                continue
-            
-            ## Create the task object for this image
-            task = Task(file, path_)
+        # Set the output directory if given, otherwise use the default
+        if dst_dir == "default":
+            task.set_dst_dir(os.path.join(src_dir, "classified"))
+        else:
+            task.set_dst_dir(dst_dir)
 
-            # Set the output directory if given, otherwise use the default
-            if dst_dir == "default":
-                task.set_dst_dir(os.path.join(path_, "classified"))
-            else:
-                task.set_dst_dir(dst_dir)
+        ## Check the output directory for completed files
+        # if os.path.isdir(task.get_dst_dir()):
+        #     clsf_imgs = os.listdir(task.get_dst_dir())
+        #     # Finished images have a consistant naming structure:
+        #     target_name = image_name + '_classified.tif'
+        #     for img in clsf_imgs:
+        #         # Set this task to complete if we find the finished image
+        #         if img == target_name:
+        #             task.mark_complete()
+        #
+        #     ## Skip to the next image if this task is complete
+        #     if task.is_complete():
+        #         continue
 
-            ## Check the output directory for completed files
-            if os.path.isdir(task.get_dst_dir()):
-                clsf_imgs = os.listdir(task.get_dst_dir())
-                # Finished images have a consistant naming structure:
-                target_name = image_name + '_classified.tif'
-                for img in clsf_imgs:
-                    # Set this task to complete if we find the finished image
-                    if img == target_name:
-                        task.mark_complete()
-                
-                ## Skip to the next image if this task is complete
-                if task.is_complete():
-                    continue
-
-            task_list.append(task)
+        task_list.append(task)
 
     return task_list
 
@@ -154,7 +147,7 @@ def create_task_list_db(db_filepath):
 
 
 #### Load Training Dataset (TDS) (Label Vector and Feature Matrix)
-def load_tds(file_name, list_name):
+def load_tds(file_name, list_name, image_type):
     '''
     INPUT: 
         input_directory of .h5 training data
@@ -163,20 +156,25 @@ def load_tds(file_name, list_name):
     RETURNS:
         tds = [label_vector, training_feature_matrix]
     '''
+    if image_type == 'srgb':
+        list_prefix = list_name + "_"
+        label_name = "{}labels".format(list_prefix)
+    else:
+        list_prefix = ""
+        label_name = list_name
+
 
     ## Load the training data
     with h5py.File(file_name, 'r') as training_file:
-        label_vector = training_file[list_name][:]
-        segments = training_file['segment_list'][:]
-        training_feature_matrix = training_file['feature_matrix'][:]
+        label_vector = training_file[label_name][:]
+        training_feature_matrix = training_file['{}feature_matrix'.format(list_prefix)][:]
 
     ## Convert inputs to python lists
     label_vector = label_vector.tolist()
     training_feature_matrix = training_feature_matrix.tolist()
     # Remove feature lists that don't have an associated label
     training_feature_matrix = training_feature_matrix[:len(label_vector)]
-    # print "__"
-    # print len(label_vector)
+
     ## Remove the segments labeled "unknown" (0)
     while 0 in label_vector:
         i = label_vector.index(0)
@@ -189,13 +187,11 @@ def load_tds(file_name, list_name):
         label_vector.pop(i)
         training_feature_matrix.pop(i)
 
-    ## Remove the segments labeled "Shadow" (0)
-    # x = 0
-    # while 5 in label_vector:
-    #     i = label_vector.index(5)
-    #     label_vector.pop(i)
-    #     training_feature_matrix.pop(i)
-    #     x+=1
+    if list_name != 'spring':
+        while 5 in label_vector:
+            i = label_vector.index(5)
+            label_vector.pop(i)
+            training_feature_matrix.pop(i)
 
     # Combine the label vector and training feature matrix into one variable. 
     tds = [label_vector,training_feature_matrix]
