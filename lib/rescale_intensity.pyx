@@ -5,14 +5,6 @@ cimport cython
 import numpy as np
 from ctypes import *
 
-def rescale_intensity(src_ds, int imin, int imax, int omin, int omax):
-
-    # Check raster structure for panchromatic images:
-    if src_ds.ndim == 3:
-        return _rescale_intensity_3d(src_ds, imin, imax, omin, omax)
-    else:
-        return _rescale_intensity_2d(src_ds, imin, imax, omin, omax)
-
 
 def white_balance(src_ds, reference, double imax):
     '''
@@ -50,6 +42,15 @@ def white_balance(src_ds, reference, double imax):
                 dst_view[b, x, y] = new_val
 
     return np.copy(dst_view)
+
+
+def rescale_intensity(src_ds, int imin, int imax, int omin, int omax):
+
+    # Check raster structure for panchromatic images:
+    if src_ds.ndim == 3:
+        return _rescale_intensity_3d(src_ds, imin, imax, omin, omax)
+    else:
+        return _rescale_intensity_2d(src_ds, imin, imax, omin, omax)
 
 
 def _rescale_intensity_3d(src_ds, int imin, int imax, int omin, int omax):

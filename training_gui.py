@@ -682,7 +682,7 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
 
     # **************************************** #
     # For expanding icebridge training set 9.18.18
-    target_images = ["WV02_20150708185815_10300100451B4D00_15JUL08185815-M1BS-500518629040_01_P002_u08rf3413_pansh_window.tif"]
+    target_images = ["WV02_20140426051028_103001002F979600_14APR26051028-M1BS-500118661010_01_P002_u08rf3413_pansh_window.tif"]
     to_skip = ["WV02_20100815230724_103001000649F000_10AUG15230724-M1BS-500060589150_01_P002_u08rf3413_pansh_window.tif",
                "WV02_20140730000713_103001003405CA00_14JUL30000713-M1BS-500140639010_01_P006_u08rf3413_pansh_window.tif",
                "WV02_20150403044620_1030010040A6E100_15APR03044620-M1BS-500352729070_01_P002_u08rf3413_pansh_window.tif",
@@ -708,9 +708,9 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
                 if image_name in to_skip:
                     print("Skipping image: {}".format(image_name))
                     continue
-                # if image_name not in target_images:
-                #     print("Skipping {}".format(image_name))
-                #     continue
+                if image_name not in target_images:
+                    print("Skipping {}".format(image_name))
+                    continue
             # Otherwise find the image name from the next unlabeled segment
             else:
                 ext = os.path.splitext(next_image)[1]
