@@ -142,7 +142,7 @@ def load_tds(file_name, list_name, image_type):
         label_vector.pop(i)
         training_feature_matrix.pop(i)
 
-    if list_name != 'spring':
+    if list_name != 'spring' and image_type != 'wv02_ms':
         while 5 in label_vector:
             i = label_vector.index(5)
             label_vector.pop(i)
