@@ -130,8 +130,8 @@ def parse_metadata(metadata, image_type):
     except KeyError:
         # Use June 1 as default date
         yyyy = 2014
-        mm = 06
-        dd = 01
+        mm = 6
+        dd = 1
 
     # Convert the date to julian day format (number of days since Jan 1)
     d = datetime.date(int(yyyy), int(mm), int(dd))

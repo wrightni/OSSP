@@ -224,8 +224,8 @@ def write_to_csv(csv_name, path, image_name, pixel_counts):
                 writer.writerow([image_name, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3], pixel_counts[4],
                     percentages[0], percentages[1], percentages[2], percentages[3], percentages[4]])
     except:
-        print "error saving csv"
-        print pixel_counts
+        print("error saving csv")
+        print(pixel_counts)
 
 
 #### Recombine classified image splits
@@ -248,7 +248,7 @@ def stitch(image_files, save_path=None):
     #   will be accurate within the scope of this method
     root = math.sqrt(len(image_files))
     if int(root) != root:
-        print "Incomplete set of images!"
+        print("Incomplete set of images!")
         return None
 
     classified_list = []

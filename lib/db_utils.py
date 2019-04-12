@@ -4,7 +4,7 @@ import datetime
 import sys
 from osgeo import osr
 import sqlite3
-from utils import Task
+from .utils import Task
 
 
 def create_task_list_db(db_filepath):
@@ -111,7 +111,7 @@ def write_to_database(db_filepath, image_id, part, pixel_counts,
                   "UL = '({5:0.3f}, {6:0.3f})', LL = '({7:0.3f}, {8:0.3f})', " +
                   "UR = '({9:0.3f}, {10:0.3f})', LR = '({11:0.3f}, {12:0.3f})', " +
                   "PART = '{13:s}', PDATE = '{14:s}', VCODE = '{15:s}', VTDS = '{16:s}', QA = 0 " +
-                  "WHERE NAME = '{17:s}'").format(area_km, prcnt[0], prcnt[1], prcnt[2], prcnt[3],
+                  "WHERE NAME = '{17:s}'").format(area_km, prcnt[0], prcnt[1], prcnt[2]+prcnt[4], prcnt[3],
                                                  cc[0][0], cc[0][1], cc[1][0], cc[1][1],
                                                  cc[2][0], cc[2][1], cc[3][0], cc[3][1],
                                                  part, current_date, vcode, vtds,

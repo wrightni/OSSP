@@ -223,7 +223,7 @@ def main():
             try:
                 from tqdm import tqdm
             except ImportError:
-                print "Install tqdm to display progress bar."
+                print("Install tqdm to display progress bar.")
                 verbose = False
             else:
                 pbar = tqdm(total=qsize, unit='block')
@@ -283,11 +283,11 @@ def main():
 
         # Write extra data (total pixel counts and quality score to the database (or csv)
         output_csv = os.path.join(task.get_dst_dir(), image_name_noext + '_md.csv')
-        with open(output_csv, "wb") as csvfile:
+        with open(output_csv, "w") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water", "Shadow"])
+            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Dark Ponds", "Open Water"])
             writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2],
-                             pixel_counts[3], pixel_counts[4]])
+                             pixel_counts[4], pixel_counts[3]])
 
         # Writing the results to a sqlite database. (Only works for
         #   a specific database structure that has already been created)
@@ -308,7 +308,7 @@ def main():
         # Close the progress bar
         if verbose:
             pbar.close()
-            print "Finished Processing."
+            print("Finished Processing.")
             tracker += 1
             print("{}/{}".format(tracker,num_tasks))
 

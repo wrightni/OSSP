@@ -3,10 +3,8 @@
 # cython: wraparound=False
 cimport cython
 import numpy as np
-import math
 from scipy import stats as spstats
 from ctypes import *
-import psutil
 
 
 def analyze_srgb_image(input_image, watershed_image, segment_id=False):
@@ -287,7 +285,7 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
 
 def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
                const unsigned int[:,:] label_image_view,
-               int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
+               unsigned int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
     pixels into a list of internal and external intensity pixels for every
@@ -298,7 +296,8 @@ def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
         External: Array of length (number of labels), each element is a list
             of intensity values that are adjacent to that label number.
     '''
-    cdef int x, y, sn, i, w, b
+    cdef int x, y, i, w, b
+    cdef unsigned int sn
     cdef unsigned char new_val
     cdef float count, mean, M2
     cdef float delta, delta2
@@ -408,7 +407,7 @@ def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
 
 def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
                         const unsigned int[:,:] label_image_view,
-                        int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
+                        unsigned int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
     pixels into a list of internal and external intensity pixels for every
@@ -419,7 +418,8 @@ def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
         External: Array of length (number of labels), each element is a list
             of intensity values that are adjacent to that label number.
     '''
-    cdef int x, y, sn, i, w, b
+    cdef int x, y, i, w, b
+    cdef unsigned int sn
     cdef int h_count
     cdef unsigned char new_val
     cdef float count, mean, M2

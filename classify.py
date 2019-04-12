@@ -92,4 +92,4 @@ def plot_confusion_matrix(y_pred, y):
     plt.xlabel("true value")
     plt.ylabel("predicted value")
     plt.show()
-    print metrics.confusion_matrix(y_pred, y)
+    print(metrics.confusion_matrix(y_pred, y))
