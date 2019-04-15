@@ -88,7 +88,7 @@ def main():
 
     ## FOR Server Processing
     # Redirect stdout and sterr. fh is closed at end of script
-    log_folder = '/media/sequoia/DigitalGlobe/processed'
+    log_folder = '/media/sequoia/DigitalGlobe/processing'
     fh, stdout_orig, stderr_orig = db_utils.redirect_output(log_folder)
 
     # For Ames OIB Processing:
@@ -133,10 +133,13 @@ def main():
         if not os.path.isdir(task.get_dst_dir()):
             os.makedirs(task.get_dst_dir())
 
+        if verbose:
+            print("Starting {}...".format(task.get_id()))
+
         # Run Ortho/Pan scripts if necessary
         if stretch == 'pansh':
             if verbose:
-                print("Orthorectifying and Pansharpening image...")
+                print("Orthorectifying and Pansharpening...")
                 sys.stdout.flush()
 
             full_image_name = os.path.join(task.get_src_dir(), task.get_id())
@@ -154,7 +157,7 @@ def main():
         full_image_name = os.path.join(task.get_src_dir(), task.get_id())
         if os.path.isfile(full_image_name):
             if verbose:
-                print("Loading image {}...".format(task.get_id()))
+                print("Loading image...")
             src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
         else:
             print("File not found: {}".format(full_image_name))

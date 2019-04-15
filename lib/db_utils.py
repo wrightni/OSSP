@@ -14,7 +14,7 @@ def create_task_list_db(db_filepath):
     to a custom implementation of a database and directory structure.
     '''
     base_dir = '/media/sequoia/DigitalGlobe/imagery'
-    out_dir = '/media/sequoia/DigitalGlobe/processed'
+    out_dir = '/media/sequoia/DigitalGlobe/processing'
     task_list = []
 
     # Return a list of all MS .ntf files that are in the local folder

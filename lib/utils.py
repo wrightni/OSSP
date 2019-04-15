@@ -2,7 +2,6 @@ import h5py
 import os
 import csv
 import math
-import itertools
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt

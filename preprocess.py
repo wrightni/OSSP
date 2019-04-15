@@ -38,7 +38,8 @@ def run_pgc_pansharpen(script_path, input_filepath, output_dir):
         input_filepath,
         output_dir)
 
-    log_file = os.path.join(output_dir, "2019_pansh.log")
+    current_date = datetime.datetime.today().strftime('%Y-%m-%d')
+    log_file = os.path.join(output_dir, "{}_pansh.log".format(current_date))
     log_fh = open(log_file, 'a')
     # Spawn a subprocess to execute the above command
     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
