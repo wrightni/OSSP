@@ -3,10 +3,8 @@
 # cython: wraparound=False
 cimport cython
 import numpy as np
-import math
 from scipy import stats as spstats
 from ctypes import *
-import psutil
 
 
 def analyze_srgb_image(input_image, watershed_image, segment_id=False):
@@ -17,7 +15,7 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     '''
     cdef int num_ws
     cdef int x_dim, y_dim, num_bands
-    cdef int ws, b, i
+    cdef int ws, b, i, sid
     cdef int ws_size
    
     # If no segment id is provided, analyze the features for every watershed
@@ -27,24 +25,19 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
     # is 500, then there are 501 total watersheds Sum(0,1,...,499,500) = 500+1
     if segment_id == False:
         num_ws = int(np.amax(watershed_image) + 1)
+        sid = 0
     else:
         num_ws = 1
+        sid = segment_id
 
     num_bands, x_dim, y_dim = np.shape(input_image)
 
     feature_matrix = np.zeros((num_ws,16), dtype=c_float)
     cdef float [:, :] fm_view = feature_matrix
 
-    #### Need to convert images to dtype c_int
-    # input_image = np.ndarray.astype(input_image, c_int)
-    # watershed_image = np.ndarray.astype(watershed_image, c_int)
-    if segment_id is not False:
-        internal, external = selective_pixel_sort(input_image, watershed_image,
-                                                  x_dim, y_dim, num_bands, segment_id)
-    else:
-        internal, external, internal_ext, external_ext = pixel_sort_extended(input_image, watershed_image,
-                                                                            x_dim, y_dim,
-                                                                            num_ws, num_bands)
+    internal, external, internal_ext, external_ext = pixel_sort_extended(input_image, watershed_image,
+                                                                         sid, x_dim, y_dim,
+                                                                         num_ws, num_bands)
 
     for ws in range(num_ws):
         # If there are no pixels associated with this watershed, skip this iteration
@@ -287,7 +280,7 @@ def analyze_pan_image(input_image, watershed_image, date, segment_id=False):
 
 def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
                const unsigned int[:,:] label_image_view,
-               int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
+               unsigned int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
     pixels into a list of internal and external intensity pixels for every
@@ -298,7 +291,8 @@ def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
         External: Array of length (number of labels), each element is a list
             of intensity values that are adjacent to that label number.
     '''
-    cdef int x, y, sn, i, w, b
+    cdef int x, y, i, w, b
+    cdef unsigned int sn
     cdef unsigned char new_val
     cdef float count, mean, M2
     cdef float delta, delta2
@@ -408,7 +402,7 @@ def pixel_sort(const unsigned char[:,:,:] intensity_image_view,
 
 def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
                         const unsigned int[:,:] label_image_view,
-                        int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
+                        unsigned int segment_id, int x_dim, int y_dim, int num_ws, int num_bands):
     '''
     Given an intensity image and label image of the same dimension, sort
     pixels into a list of internal and external intensity pixels for every
@@ -419,8 +413,9 @@ def pixel_sort_extended(const unsigned char[:,:,:] intensity_image_view,
         External: Array of length (number of labels), each element is a list
             of intensity values that are adjacent to that label number.
     '''
-    cdef int x, y, sn, i, w, b
+    cdef int x, y, i, w, b
     cdef int h_count
+    cdef unsigned int sn
     cdef unsigned char new_val
     cdef float count, mean, M2
     cdef float delta, delta2

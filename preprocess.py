@@ -128,8 +128,8 @@ def parse_metadata(metadata, image_type):
     except KeyError:
         # Use June 1 as default date
         yyyy = 2014
-        mm = 06
-        dd = 01
+        mm = 6
+        dd = 1
 
     # Convert the date to julian day format (number of days since Jan 1)
     d = datetime.date(int(yyyy), int(mm), int(dd))
@@ -204,6 +204,12 @@ def find_peaks(hist, bin_centers):
 
     # First find all potential peaks in the histogram
     peaks = []
+
+    # Check the lowest histogram bin
+    if hist[0] >= hist[1] and hist[0] >= hist[5]:
+        peaks.append(bin_centers[0])
+
+    # Check the middle bins
     for i in range(1, len(bin_centers) - 1):
         # Acceptable width of peak is +/-5, except in edge cases
         if i < 5:
@@ -220,7 +226,11 @@ def find_peaks(hist, bin_centers):
                 and hist[i] >= hist[i - w_l] and hist[i] >= hist[i + w_u]):
             if hist[i] > min_count:
                 peaks.append(bin_centers[i])
+    # Check the highest histogram bin
+    if hist[-1] >= hist[-2] and hist[-1] >= hist[-6]:
+        peaks.append(bin_centers[-1])
 
+    print(peaks)
     num_peaks = len(peaks)
     distance = 5  # Initial distance threshold
     # One third the 'dynamic range' (radius from peak)

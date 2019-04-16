@@ -21,28 +21,28 @@ def main():
     parser.add_argument("input_dir",
                         help='''directory path containing date directories of 
                         images to be processed''')
-    parser.add_argument("image_type", type = str, choices = ["srgb", "wv02_ms", "pan"],
-                        help = "image type: 'srgb', 'wv02_ms', 'pan'")
+    parser.add_argument("image_type", type=str, choices=["srgb", "wv02_ms", "pan"],
+                        help="image type: 'srgb', 'wv02_ms', 'pan'")
     parser.add_argument("training_dataset",
-                        help = "training data file")
-    parser.add_argument("--training_label", type = str, default = None,
-                        help = "name of training classification list")
-    parser.add_argument("-o", "--output_dir", type = str, default = "default",
-                        help = "directory to place output results.")
+                        help="training data file")
+    parser.add_argument("--training_label", type=str, default=None,
+                        help="name of training classification list")
+    parser.add_argument("-o", "--output_dir", type=str, default="default",
+                        help="directory to place output results.")
     parser.add_argument("-v", "--verbose", action="store_true",
-                        help = "display text information and progress")
+                        help="display text information and progress")
     parser.add_argument("-c", "--stretch",
-                        type = str,
-                        choices = ["hist", "pansh", "none"],
-                        default = 'hist',
-                        help = '''Apply image correction/stretch to input: \n
+                        type=str,
+                        choices=["hist", "pansh", "none"],
+                        default='hist',
+                        help='''Apply image correction/stretch to input: \n
                                hist: Histogram stretch \n
                                pansh: Orthorectify / Pansharpen for MS WV images \n
                                none: No correction''')
-    parser.add_argument("--pgc_script", type = str, default = None,
+    parser.add_argument("--pgc_script", type=str, default=None,
                         help="Path for the pansharpening script if needed")
-    parser.add_argument("-t", "--threads", type = int, default = 1,
-                        help = "Number of subprocesses to start")
+    parser.add_argument("-t", "--threads", type=int, default=1,
+                        help="Number of subprocesses to start")
 
     # Parse Arguments
     args = parser.parse_args()
@@ -163,7 +163,7 @@ def main():
         # Analyze input image histogram (if applying correction)
         if stretch == 'hist':
             stretch_params = pp.histogram_threshold(src_ds, src_dtype)
-        else: # stretch == 'none':
+        else:  # stretch == 'none':
             stretch_params = [1, 2**src_dtype - 1,
                               [2 ** src_dtype - 1 for _ in range(src_ds.RasterCount)],
                               [0 for _ in range(src_ds.RasterCount)]]
@@ -199,7 +199,7 @@ def main():
             try:
                 from tqdm import tqdm
             except ImportError:
-                print "Install tqdm to display progress bar."
+                print("Install tqdm to display progress bar.")
                 verbose = False
             else:
                 pbar = tqdm(total=qsize, unit='block')
@@ -226,7 +226,7 @@ def main():
 
             if not dst_queue.empty():
                 val = dst_queue.get()
-                if val == None:
+                if val is None:
                     finished_threads += 1
                 else:
                     # Keep only the lowest quality score found
@@ -249,7 +249,6 @@ def main():
             else:
                 time.sleep(10)
 
-
         # Update the progress bar
         if verbose: pbar.update()
 
@@ -262,7 +261,7 @@ def main():
 
         # Write extra data (total pixel counts and quality score to the database (or csv)
         output_csv = os.path.join(task.get_dst_dir(), image_name_noext + '_md.csv')
-        with open(output_csv, "wb") as csvfile:
+        with open(output_csv, "w") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water", "Shadow"])
             writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2],
@@ -271,7 +270,7 @@ def main():
         # Close the progress bar
         if verbose:
             pbar.close()
-            print "Finished Processing."
+            print("Finished Processing.")
 
 
 def construct_block_queue(block_size_x, block_size_y, x_dim, y_dim):
@@ -327,6 +326,7 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
         # Apply correction to block based on earlier histogram analysis (if applying correction)
         # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
         image_data = pp.rescale_band(image_data, lower, upper)
+        print(lower, upper)
         if white_balance:
             # Applies a white balance correction
             image_data = pp.white_balance(image_data, wb_reference, np.amax(wb_reference))

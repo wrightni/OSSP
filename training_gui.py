@@ -312,7 +312,7 @@ Shadow: Surfaces that are covered by a dark shadow.
         # Exit the training window if we have finished the preset list of segments for this
         # image
         if os.path.splitext(current_segment[0])[0] != self.image_name:
-            print "Finished image %s. Loading next image." %self.image_name
+            print("Finished image %s. Loading next image." %self.image_name)
             self.exit_image()
             return
 
@@ -510,16 +510,16 @@ Shadow: Surfaces that are covered by a dark shadow.
             self.feature_matrix[len(self.label_vector)-1] = feature_array
 
         #Printing some useful statistics
-        print str(self.label_vector[-1]) + ": " + keyPress
+        print(str(self.label_vector[-1]) + ": " + keyPress)
 
         for f in feature_array:
-            print f
+            print(f)
 
         # print self.original_image[self.subimage_index][self.sp_buffer[0],self.sp_buffer[1],0]
         # print feature_array
         # print "Number with Labels: %s" %len(self.label_vector)
         # print "Number with Features: %s" %len(self.feature_matrix)
-        print "~"*80
+        print("~"*80)
         self.next_super_pixel()
 
     def print_prediction(self, feature_array):
@@ -677,12 +677,12 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
     # Make sure we have all of the required images
     for image in required_images:
         if image in image_list:
-            print "Missing required image: {}".format(image)
+            print("Missing required image: {}".format(image))
             quit()
 
     # **************************************** #
     # For expanding icebridge training set 9.18.18
-    target_images = ["WV02_20140426051028_103001002F979600_14APR26051028-M1BS-500118661010_01_P002_u08rf3413_pansh_window.tif"]
+    target_images = ["WV02_20110715065153_103001000BB7F200_11JUL15065153-M1BS-500060780180_01_P002_u08rf3413_pansh_window.tif"]
     to_skip = ["WV02_20100815230724_103001000649F000_10AUG15230724-M1BS-500060589150_01_P002_u08rf3413_pansh_window.tif",
                "WV02_20140730000713_103001003405CA00_14JUL30000713-M1BS-500140639010_01_P006_u08rf3413_pansh_window.tif",
                "WV02_20150403044620_1030010040A6E100_15APR03044620-M1BS-500352729070_01_P002_u08rf3413_pansh_window.tif",
