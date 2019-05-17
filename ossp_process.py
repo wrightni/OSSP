@@ -3,6 +3,7 @@
 # Nicholas Wright
 
 import os
+import time
 import argparse
 import csv
 import numpy as np
@@ -20,29 +21,28 @@ def main():
     parser.add_argument("input_dir",
                         help='''directory path containing date directories of 
                         images to be processed''')
-    parser.add_argument("image_type", type = str, choices = ["srgb", "wv02_ms", "pan"],
-                        help = "image type: 'srgb', 'wv02_ms', 'pan'")
+    parser.add_argument("image_type", type=str, choices=["srgb", "wv02_ms", "pan"],
+                        help="image type: 'srgb', 'wv02_ms', 'pan'")
     parser.add_argument("training_dataset",
-                        help = "training data file")
-    parser.add_argument("--training_label", type = str, default = None,
-                        help = "name of training classification list")
-    parser.add_argument("-o", "--output_dir", type = str, default = "default",
-                        help = "directory to place output results.")
+                        help="training data file")
+    parser.add_argument("--training_label", type=str, default=None,
+                        help="name of training classification list")
+    parser.add_argument("-o", "--output_dir", type=str, default="default",
+                        help="directory to place output results.")
     parser.add_argument("-v", "--verbose", action="store_true",
-                        help = "display text information and progress")
+                        help="display text information and progress")
     parser.add_argument("-c", "--stretch",
-                        type = str,
-                        choices = ["hist", "pansh", "none"],
-                        default = 'hist',
-                        help = '''Apply image correction/stretch to input: \n
+                        type=str,
+                        choices=["hist", "pansh", "none"],
+                        default='hist',
+                        help='''Apply image correction/stretch to input: \n
                                hist: Histogram stretch \n
                                pansh: Orthorectify / Pansharpen for MS WV images \n
                                none: No correction''')
-    parser.add_argument("--pgc_script", type = str, default = None,
+    parser.add_argument("--pgc_script", type=str, default=None,
                         help="Path for the pansharpening script if needed")
-    parser.add_argument("-t", "--threads", type = int, default = 1,
-                        help = "Number of subprocesses to start")
-
+    parser.add_argument("-t", "--threads", type=int, default=1,
+                        help="Number of subprocesses to start")
 
     # Parse Arguments
     args = parser.parse_args()
@@ -71,6 +71,8 @@ def main():
     threads = args.threads
     verbose = args.verbose
     stretch = args.stretch
+    # White balance flag (To add as user option in future, presently only used on spring oib imagery)
+    white_balance = False
 
     # Use the given pansh script path, otherwise search for the correct folder
     #   in the same directory as this script.
@@ -145,6 +147,7 @@ def main():
         if image_type == 'srgb':
             if image_date <= 150:
                 tds_label = 'spring'
+                white_balance = True
             else:
                 tds_label = 'summer'
 
@@ -156,12 +159,14 @@ def main():
         y_dim = src_ds.RasterYSize
         desired_block_size = 6400
 
+        src_dtype = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
         # Analyze input image histogram (if applying correction)
         if stretch == 'hist':
-            stretch_params = pp.histogram_threshold(src_ds, image_type)
-        else: # stretch == 'none':
-            src_type = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
-            stretch_params = [1, 2**src_type - 1]
+            stretch_params = pp.histogram_threshold(src_ds, src_dtype)
+        else:  # stretch == 'none':
+            stretch_params = [1, 2**src_dtype - 1,
+                              [2 ** src_dtype - 1 for _ in range(src_ds.RasterCount)],
+                              [0 for _ in range(src_ds.RasterCount)]]
 
         # Create a blank output image dataset
         # Save the classified image output as a geotiff
@@ -175,8 +180,8 @@ def main():
         # Transfer the metadata from input image
         # dst_ds.SetMetadata(src_ds.GetMetadata())
         # Transfer the input projection
-        dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
-        dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
+        #dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
+        #dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
 
         # Find the appropriate image block read size
         block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
@@ -194,7 +199,7 @@ def main():
             try:
                 from tqdm import tqdm
             except ImportError:
-                print "Install tqdm to display progress bar."
+                print("Install tqdm to display progress bar.")
                 verbose = False
             else:
                 pbar = tqdm(total=qsize, unit='block')
@@ -205,7 +210,7 @@ def main():
         NUMBER_OF_PROCESSES = threads
         block_procs = [Process(target=process_block_queue,
                                args=(lock, block_queue, dst_queue, full_image_name,
-                                     assess_quality, stretch_params, tds, metadata))
+                                     assess_quality, stretch_params, white_balance, tds, metadata))
                        for _ in range(NUMBER_OF_PROCESSES)]
 
         for proc in block_procs:
@@ -218,9 +223,10 @@ def main():
         # Collect data from processes as they complete tasks
         finished_threads = 0
         while finished_threads < NUMBER_OF_PROCESSES:
+
             if not dst_queue.empty():
                 val = dst_queue.get()
-                if val == None:
+                if val is None:
                     finished_threads += 1
                 else:
                     # Keep only the lowest quality score found
@@ -239,6 +245,9 @@ def main():
                     dst_ds.FlushCache()
                     # Update the progress bar
                     if verbose: pbar.update()
+            # Give the other threads some time to finish their tasks.
+            else:
+                time.sleep(10)
 
         # Update the progress bar
         if verbose: pbar.update()
@@ -252,15 +261,16 @@ def main():
 
         # Write extra data (total pixel counts and quality score to the database (or csv)
         output_csv = os.path.join(task.get_dst_dir(), image_name_noext + '_md.csv')
-        with open(output_csv, "wb") as csvfile:
+        with open(output_csv, "w") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water"])
-            writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3]])
+            writer.writerow(["Quality Score", "White Ice", "Gray Ice", "Melt Ponds", "Open Water", "Shadow"])
+            writer.writerow([quality_score, pixel_counts[0], pixel_counts[1], pixel_counts[2],
+                             pixel_counts[3], pixel_counts[4]])
 
         # Close the progress bar
         if verbose:
             pbar.close()
-            print "Finished Processing."
+            print("Finished Processing.")
 
 
 def construct_block_queue(block_size_x, block_size_y, x_dim, y_dim):
@@ -284,18 +294,19 @@ def construct_block_queue(block_size_x, block_size_y, x_dim, y_dim):
 
 
 def process_block_queue(lock, block_queue, dst_queue, full_image_name,
-                        assess_quality, stretch_params, tds, im_metadata):
+                        assess_quality, stretch_params, white_balance, tds, im_metadata):
     '''
     Function run by each process. Will process blocks placed in the block_queue until the 'STOP' command is reached.
     '''
     # Parse input arguments
-    lower, upper = stretch_params
+    lower, upper, wb_reference, bp_reference = stretch_params
+    wb_reference = np.array(wb_reference, dtype=np.float)
+    bp_reference = np.array(bp_reference, dtype=np.float)
     image_type = im_metadata[0]
 
     for block_indices in iter(block_queue.get, 'STOP'):
 
         x, y, read_size_x, read_size_y = block_indices
-
         # Load block data with gdal (offset and block size)
         lock.acquire()
         src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
@@ -312,17 +323,19 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
             quality_score = pp.calc_q_score(image_data[0])
         else:
             quality_score = 1.
-
         # Apply correction to block based on earlier histogram analysis (if applying correction)
         # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
         image_data = pp.rescale_band(image_data, lower, upper)
+        if white_balance:
+            # Applies a white balance correction
+            image_data = pp.white_balance(image_data, wb_reference, np.amax(wb_reference))
 
         # Segment image
         segmented_blocks = segment_image(image_data, image_type=image_type)
 
         # Classify image
         classified_block = classify_image(image_data, segmented_blocks,
-                                          tds, im_metadata)
+                                          tds, im_metadata, wb_reference, bp_reference)
 
         # Add the pixel counts from this classified split to the
         #   running total.

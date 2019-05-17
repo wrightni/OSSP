@@ -11,7 +11,6 @@ import matplotlib.colors as colors
 import matplotlib.image as mimg
 from ctypes import *
 
-
 valid_extensions = ['.tif','.tiff','.jpg']
 
 class Task:
@@ -85,18 +84,18 @@ def create_task_list(src_dir, dst_dir):
             task.set_dst_dir(dst_dir)
 
         ## Check the output directory for completed files
-        if os.path.isdir(task.get_dst_dir()):
-            clsf_imgs = os.listdir(task.get_dst_dir())
-            # Finished images have a consistant naming structure:
-            target_name = image_name + '_classified.tif'
-            for img in clsf_imgs:
-                # Set this task to complete if we find the finished image
-                if img == target_name:
-                    task.mark_complete()
-
-            ## Skip to the next image if this task is complete
-            if task.is_complete():
-                continue
+        # if os.path.isdir(task.get_dst_dir()):
+        #     clsf_imgs = os.listdir(task.get_dst_dir())
+        #     # Finished images have a consistant naming structure:
+        #     target_name = image_name + '_classified.tif'
+        #     for img in clsf_imgs:
+        #         # Set this task to complete if we find the finished image
+        #         if img == target_name:
+        #             task.mark_complete()
+        #
+        #     ## Skip to the next image if this task is complete
+        #     if task.is_complete():
+        #         continue
 
         task_list.append(task)
 
@@ -143,6 +142,12 @@ def load_tds(file_name, list_name, image_type):
         i = label_vector.index(6)
         label_vector.pop(i)
         training_feature_matrix.pop(i)
+
+    if list_name != 'spring' and image_type != 'wv02_ms':
+        while 5 in label_vector:
+            i = label_vector.index(5)
+            label_vector.pop(i)
+            training_feature_matrix.pop(i)
 
     # Combine the label vector and training feature matrix into one variable. 
     tds = [label_vector,training_feature_matrix]
@@ -220,8 +225,8 @@ def write_to_csv(csv_name, path, image_name, pixel_counts):
                 writer.writerow([image_name, pixel_counts[0], pixel_counts[1], pixel_counts[2], pixel_counts[3], pixel_counts[4],
                     percentages[0], percentages[1], percentages[2], percentages[3], percentages[4]])
     except:
-        print "error saving csv"
-        print pixel_counts
+        print("error saving csv")
+        print(pixel_counts)
 
 def write_to_database(db_name, path, image_id, part, pixel_counts):
     '''
@@ -282,7 +287,7 @@ def stitch(image_files, save_path=None):
     #   will be accurate within the scope of this method
     root = math.sqrt(len(image_files))
     if int(root) != root:
-        print "Incomplete set of images!"
+        print("Incomplete set of images!")
         return None
 
     classified_list = []
