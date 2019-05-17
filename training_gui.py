@@ -7,8 +7,8 @@
 #        Random Forest Classification method. 
 
 
-import Tkinter as tk
-import tkFont
+import tkinter as tk
+import tkinter.font
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
@@ -73,8 +73,11 @@ class TrainingWindow:
         self.savepath = savepath
         self.tracker = 0                        # Number of segment sets added from the current image
         # **********
-        self.rfc = RandomForestClassifier(n_estimators=100)
-        self.rfc.fit(self.feature_matrix[:len(self.label_vector)], self.label_vector)
+        if len(self.label_vector) != 0:
+            self.rfc = RandomForestClassifier(n_estimators=100)
+            self.rfc.fit(self.feature_matrix[:len(self.label_vector)], self.label_vector)
+        else:
+            self.rfc = RandomForestClassifier(n_estimators=100)
         self.zoom_win_x = 0
         self.zoom_win_y = 0
         # **********
@@ -240,24 +243,24 @@ Shadow: Surfaces that are covered by a dark shadow.
         ax.imshow(color_image,interpolation='None',vmin=0,vmax=255)
         ax.tick_params(axis='both',          # changes apply to the x-axis
                        which='both',         # both major and minor ticks are affected
-                       bottom='off',         # ticks along the bottom edge are off
-                       top='off',            # ticks along the top edge are off
-                       left='off',
-                       right='off',
-                       labelleft='off',
-                       labelbottom='off')
+                       bottom=False,         # ticks along the bottom edge are off
+                       top=False,            # ticks along the top edge are off
+                       left=False,
+                       right=False,
+                       labelleft=False,
+                       labelbottom=False)
         ax.set_label('ax1')
 
         ax = self.fig.add_subplot(2,2,2)
         ax.imshow(cropped_image,interpolation='None',vmin=0,vmax=255)
         ax.tick_params(axis='both',          # changes apply to the x-axis
                        which='both',         # both major and minor ticks are affected
-                       bottom='off',         # ticks along the bottom edge are off
-                       top='off',            # ticks along the top edge are off
-                       left='off',
-                       right='off',
-                       labelleft='off',
-                       labelbottom='off')
+                       bottom=False,         # ticks along the bottom edge are off
+                       top=False,  # ticks along the top edge are off
+                       left=False,
+                       right=False,
+                       labelleft=False,
+                       labelbottom=False)
         ax.set_label('ax2')
 
         ax = self.fig.add_subplot(2,2,3)
@@ -271,12 +274,12 @@ Shadow: Surfaces that are covered by a dark shadow.
         ax.set_xlim([0,np.shape(full_image)[1]])
         ax.tick_params(axis='both',          # changes apply to the x-axis
                        which='both',         # both major and minor ticks are affected
-                       bottom='off',         # ticks along the bottom edge are off
-                       top='off',            # ticks along the top edge are off
-                       left='off',
-                       right='off',
-                       labelleft='off',
-                       labelbottom='off')
+                       bottom=False,         # ticks along the bottom edge are off
+                       top=False,  # ticks along the top edge are off
+                       left=False,
+                       right=False,
+                       labelleft=False,
+                       labelbottom=False)
         ax.set_label('ax3')
 
         ax = self.fig.add_subplot(2,2,4,adjustable='datalim',frame_on=False)
@@ -312,7 +315,7 @@ Shadow: Surfaces that are covered by a dark shadow.
         # Exit the training window if we have finished the preset list of segments for this
         # image
         if os.path.splitext(current_segment[0])[0] != self.image_name:
-            print("Finished image %s. Loading next image." %self.image_name)
+            print(("Finished image %s. Loading next image." %self.image_name))
             self.exit_image()
             return
 
@@ -362,12 +365,13 @@ Shadow: Surfaces that are covered by a dark shadow.
                 if new_segment not in self.segment_list and new_segment not in segments_to_add:
                     segments_to_add.append(new_segment)
 
-        print("Attempts: {}".format(a))
+        print(("Attempts: {}".format(a)))
         self.segment_list += segments_to_add
 
         # **********
-        self.rfc = RandomForestClassifier(n_estimators=100)
-        self.rfc.fit(self.feature_matrix[:len(self.label_vector)], self.label_vector)
+        if len(self.label_vector) > 0:
+            # self.rfc = RandomForestClassifier(n_estimators=100)
+            self.rfc.fit(self.feature_matrix[:len(self.label_vector)], self.label_vector)
         # **********
 
     def onclick(self, event):
@@ -390,8 +394,8 @@ Shadow: Surfaces that are covered by a dark shadow.
                 segment_id = self.secondary_image[y, x]
 
             if segment_id >= 0:
-                print("You clicked at ({}, {}) in {}".format(x, y, axes_properties['label']))
-                print("Segment id: {}".format(segment_id))
+                print(("You clicked at ({}, {}) in {}".format(x, y, axes_properties['label'])))
+                print(("Segment id: {}".format(segment_id)))
                 new_segment = [self.image_name,
                                "{}".format(segment_id)]
                 if new_segment not in self.segment_list:
@@ -406,21 +410,20 @@ Shadow: Surfaces that are covered by a dark shadow.
     def autorun(self):
         segment_id = int(self.segment_list[len(self.label_vector):][0][1])
 
-        feature_array = attr_calc.analyze_ms_image(self.original_image,
-                                                   self.secondary_image,
-                                                   self.wb_ref,
-                                                   self.br_ref,
-                                                   segment_id=segment_id)
+        # Create the a attribute list for the labeled segment
+        feature_array = calc_attributes(self.original_image, self.secondary_image,
+                                        self.wb_ref, self.br_ref, self.im_date, segment_id, self.im_type)
+
         # attribute_calculations returns a 2d array, but we only want the 1d list of features.
         feature_array = feature_array[0]
-        print "~" * 80
+        print("~" * 80)
         pred, proba = self.print_prediction(feature_array)
         if 0.90 < proba < 0.96:
-            timeout = 4
-            print(print_color.BOLD + "Label if incorrect:" + print_color.END)
+            timeout = 4 #6
+            print((print_color.BOLD + "Label if incorrect:" + print_color.END))
         elif proba < .9:
-            timeout = 10
-            print(print_color.BOLD + print_color.RED + "Label if incorrect:" + print_color.END)
+            timeout = 10 #12
+            print((print_color.BOLD + print_color.RED + "Label if incorrect:" + print_color.END))
         else:
             timeout = 0.5
 
@@ -434,13 +437,13 @@ Shadow: Surfaces that are covered by a dark shadow.
                 return
             if 0 <= s < 6:
                 label = s
-                print("Assigning label {} instead.".format(label))
+                print(("Assigning label {} instead.".format(label)))
             else:
                 print("Ending autorun.")
                 return
         else:
             label = pred
-            print("No input. Assigning label: {}".format(label))
+            print(("No input. Assigning label: {}".format(label)))
 
         self.label_vector.append(label)
         self.tracker += 1
@@ -476,21 +479,8 @@ Shadow: Surfaces that are covered by a dark shadow.
         self.tracker += 1
 
         # Create the a attribute list for the labeled segment
-        if self.im_type == 'pan':
-            feature_array = attr_calc.analyze_pan_image(self.original_image,
-                                                        self.secondary_image,
-                                                        self.im_date,
-                                                        segment_id=segment_id)
-        if self.im_type == 'srgb':
-            feature_array = attr_calc.analyze_srgb_image(self.original_image,
-                                                         self.secondary_image,
-                                                         segment_id=segment_id)
-        if self.im_type == 'wv02_ms':
-            feature_array = attr_calc.analyze_ms_image(self.original_image,
-                                                       self.secondary_image,
-                                                       self.wb_ref,
-                                                       self.br_ref,
-                                                       segment_id=segment_id)
+        feature_array = calc_attributes(self.original_image, self.secondary_image,
+                                        self.wb_ref, self.br_ref, self.im_date, segment_id, self.im_type)
 
         # attribute_calculations returns a 2d array, but we only want the 1d list of features.
         feature_array = feature_array[0]
@@ -505,12 +495,12 @@ Shadow: Surfaces that are covered by a dark shadow.
         else:
             old_feature_array = self.feature_matrix[len(self.label_vector)-1]
             print("Recalculated Feature.")
-            print("Old: {} {}".format(old_feature_array[0],old_feature_array[1]))
-            print("New: {} {}".format(feature_array[0], feature_array[1]))
+            print(("Old: {} {}".format(old_feature_array[0],old_feature_array[1])))
+            print(("New: {} {}".format(feature_array[0], feature_array[1])))
             self.feature_matrix[len(self.label_vector)-1] = feature_array
 
         #Printing some useful statistics
-        print(str(self.label_vector[-1]) + ": " + keyPress)
+        print((str(self.label_vector[-1]) + ": " + keyPress))
 
         for f in feature_array:
             print(f)
@@ -519,14 +509,18 @@ Shadow: Surfaces that are covered by a dark shadow.
         # print feature_array
         # print "Number with Labels: %s" %len(self.label_vector)
         # print "Number with Features: %s" %len(self.feature_matrix)
-        print("~"*80)
+        print(("~"*80))
         self.next_super_pixel()
 
     def print_prediction(self, feature_array):
-        pred = self.rfc.predict(feature_array.reshape(1, -1))[0]
-        pred_prob = self.rfc.predict_proba(feature_array.reshape(1, -1))[0]
-        print("Predicted value: {}{}{} ({})".format(print_color.PURPLE, pred, print_color.END, pred_prob[pred]))
-        return pred, pred_prob[pred]
+        if len(self.label_vector) > 10:
+            pred = self.rfc.predict(feature_array.reshape(1, -1))[0]
+            pred_prob = self.rfc.predict_proba(feature_array.reshape(1, -1))[0]
+            pred_prob = np.amax(pred_prob)
+            print(("Predicted value: {}{}{} ({})".format(print_color.PURPLE, pred, print_color.END, pred_prob)))
+            return pred, pred_prob
+        else:
+            return 0, 0
     
     #Save progress      
     def save(self):
@@ -539,7 +533,7 @@ Shadow: Surfaces that are covered by a dark shadow.
         # Compiles all of the user data that was in the previous training validation file so that
         # it can be added to the new file as well. (Because erasing and recreating a .h5 is easier
         # than altering an existing one)
-        for prev_user in infile.keys():
+        for prev_user in list(infile.keys()):
             if prev_user != 'feature_matrix' and prev_user != 'segment_list' and prev_user != USER_NAME:
                 prev_names.append(prev_user)
                 prev_data.append(infile[prev_user][:])
@@ -549,13 +543,14 @@ Shadow: Surfaces that are covered by a dark shadow.
         outfile = h5py.File(self.savepath, 'w')
         outfile.create_dataset('feature_matrix', data=self.feature_matrix)
         outfile.create_dataset(USER_NAME, data=self.label_vector)
+        self.segment_list = np.array(self.segment_list, dtype=np.string_)
         outfile.create_dataset('segment_list', data=self.segment_list)
 
         for i in range(len(prev_names)):
             outfile.create_dataset(prev_names[i], data=prev_data[i])
 
         outfile.close()
-        print "Done."
+        print("Done.")
     
     def exit_image(self):
         # Trim the unlabeled segments from segment list
@@ -570,6 +565,26 @@ Shadow: Surfaces that are covered by a dark shadow.
         self.parent.destroy()
         self.parent.quit()
         quit()
+
+
+def calc_attributes(original_image, secondary_image,
+                    wb_ref, br_ref, im_date, segment_id, im_type):
+    if im_type == 'pan':
+        feature_array = attr_calc.analyze_pan_image(original_image,
+                                                    secondary_image,
+                                                    im_date,
+                                                    segment_id=segment_id)
+    if im_type == 'srgb':
+        feature_array = attr_calc.analyze_srgb_image(original_image,
+                                                     secondary_image,
+                                                     segment_id=segment_id)
+    if im_type == 'wv02_ms':
+        feature_array = attr_calc.analyze_ms_image(original_image,
+                                                   secondary_image,
+                                                   wb_ref,
+                                                   br_ref,
+                                                   segment_id=segment_id)
+    return feature_array
 
 
 # Returns all of the unique images in segment_list
@@ -591,18 +606,20 @@ def load_data(input_file):
     try:
         data_file = h5py.File(input_file,'r')
     except:
-        print "Invalid data file."
+        print("Invalid data file.")
         quit()
 
     # Load the existing feature matrix and segment list if they exist,
     #   otherwise initialize an empty array for these lists.
-    if 'feature_matrix' in data_file.keys():
+    if 'feature_matrix' in list(data_file.keys()):
         feature_matrix = data_file['feature_matrix'][:].tolist()
     else:
         feature_matrix = []
 
-    if 'segment_list' in data_file.keys():
-        segment_list = data_file['segment_list'][:].tolist()
+    if 'segment_list' in list(data_file.keys()):
+        # segment_list = data_file['segment_list'][:].tolist()
+        # For loading files created in py2
+        segment_list = [[name[0].decode(), name[1].decode()] for name in data_file['segment_list']]
     else:
         # The segment list is a required entry. Setting this to false
         # triggers the appropriate warning later.
@@ -614,7 +631,7 @@ def load_data(input_file):
 # or to continue building on an existing list. 
 def welcome_gui(input_file, segment_list):
     master = tk.Tk()
-    master_font = tkFont.Font(family="Times New Roman", size=16)
+    master_font = tkinter.font.Font(family="Times New Roman", size=16)
     master['bg'] = 'white'
     master.title("Image Classifier")
 
@@ -635,7 +652,7 @@ def welcome_gui(input_file, segment_list):
     tk.Button(master, text="Quit", font=master_font, command=master.destroy).grid(row=1, column=2, pady=4, padx=2)
 
     i=0
-    existing_lists = input_file.keys()
+    existing_lists = list(input_file.keys())
     # print existing_lists
     for key in existing_lists:
         if key == 'segment_list' or key == 'feature_matrix':
@@ -647,7 +664,8 @@ def welcome_gui(input_file, segment_list):
                 command=lambda i=i: enter_username(master, existing_lists[i])).grid(row=i+1, column=1, pady=4)
             i += 1
 
-    tk.mainloop()
+    # tk.mainloop()
+    master.mainloop()
 
 
 def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_type, tds_filename):
@@ -677,18 +695,8 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
     # Make sure we have all of the required images
     for image in required_images:
         if image in image_list:
-            print("Missing required image: {}".format(image))
-            quit()
-
-    # **************************************** #
-    # For expanding icebridge training set 9.18.18
-    target_images = ["WV02_20110715065153_103001000BB7F200_11JUL15065153-M1BS-500060780180_01_P002_u08rf3413_pansh_window.tif"]
-    to_skip = ["WV02_20100815230724_103001000649F000_10AUG15230724-M1BS-500060589150_01_P002_u08rf3413_pansh_window.tif",
-               "WV02_20140730000713_103001003405CA00_14JUL30000713-M1BS-500140639010_01_P006_u08rf3413_pansh_window.tif",
-               "WV02_20150403044620_1030010040A6E100_15APR03044620-M1BS-500352729070_01_P002_u08rf3413_pansh_window.tif",
-               "WV02_20150710010616_10300100464A7D00_15JUL10010616-M1BS-500518802010_01_P002_u08rf3413_pansh_window.tif",
-               "WV03_20150721040829_104001000E6C2F00_15JUL21040829-M1BS-500495166010_01_P002_u08rf3413_pansh_window.tif"]
-    # **************************************** #
+            print(("Missing required image: {}".format(image)))
+            #quit()
 
     # As long as there were files in the input directory, loop indefinitely
     # This loop breaks when the training GUI is closed.
@@ -696,21 +704,18 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
 
         # Cycle through each image in the list
         for next_image in image_list:
-            # Supplemental information that is stored in the training data
-            im_metadata = np.zeros((17), dtype=c_int)
-
             # If we are out of predetermined segments to classify, start picking
             # images from those in the directory provided
 
-            print(len(segment_list), len(label_vector))
+            print((len(segment_list), len(label_vector)))
             if len(segment_list) == len(label_vector):
                 image_name = os.path.split(next_image)[1]
-                if image_name in to_skip:
-                    print("Skipping image: {}".format(image_name))
-                    continue
-                if image_name not in target_images:
-                    print("Skipping {}".format(image_name))
-                    continue
+                # if image_name in to_skip:
+                #     print(("Skipping image: {}".format(image_name)))
+                #     continue
+                # if image_name not in target_images:
+                #     print(("Skipping {}".format(image_name)))
+                #     continue
             # Otherwise find the image name from the next unlabeled segment
             else:
                 ext = os.path.splitext(next_image)[1]
@@ -719,8 +724,7 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
                 #   exist to work from an existing tds. That is, we cant resegment the
                 #   image, because it will give different results and segment ids will not match.
 
-
-            print("Working on image: {}".format(image_name))
+            print(("Working on image: {}".format(image_name)))
 
             full_image_name = os.path.join(input_directory, image_name)
             src_ds = gdal.Open(full_image_name, gdal.GA_ReadOnly)
@@ -728,17 +732,20 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
             num_bands = src_ds.RasterCount
             metadata = src_ds.GetMetadata()
             im_date = pp.parse_metadata(metadata, im_type)
+
+            # Supplemental information that is stored in the training data
+            im_metadata = np.zeros((num_bands*2 + 1), dtype=c_int)
             im_metadata[0] = im_date
 
             src_dtype = gdal.GetDataTypeSize(src_ds.GetRasterBand(1).DataType)
             lower, upper, wb_ref, br_ref = pp.histogram_threshold(src_ds, src_dtype)
             wb_ref = np.array(wb_ref, dtype=c_uint8)
             br_ref = np.array(br_ref, dtype=c_uint8)
-            im_metadata[1:9] = wb_ref
-            im_metadata[9:] = br_ref
+            im_metadata[1:num_bands+1] = wb_ref
+            im_metadata[num_bands+1:] = br_ref
             print(im_metadata)
             image_data = src_ds.ReadAsArray()
-            print(lower, upper)
+            print((lower, upper))
             image_data = pp.rescale_band(image_data, lower, upper)
 
             # Close the GDAL dataset
@@ -832,7 +839,7 @@ def main():
     # must use .tolist() because datasets in h5py files are numpy arrays, and we want
     # these as python lists. 
     try: 
-        if USER_NAME in data_file.keys():
+        if USER_NAME in list(data_file.keys()):
             label_vector = data_file[USER_NAME][:].tolist()
             # print "Username found: You have classified %s segments so far." %len(label_vector)
         else:

@@ -56,22 +56,22 @@ def segment_image(input_data, image_type=False):
     # Method that provides the user an option to view the original image
     #  side by side with the segmented image.
     # print(np.amax(segmented_data))
-    # image_data = np.array([input_data[band_list[0]],
-    #                        input_data[band_list[1]],
-    #                        input_data[band_list[2]]],
-    #                       dtype=np.uint8)
-    # ws_bound = segmentation.find_boundaries(segmented_data)
-    # ws_display = utils.create_composite(image_data)
-    #
-    # # save_name = '/Users/nicholas/Desktop/original_{}.png'
-    # # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
-    #
-    # ws_display[:, :, 0][ws_bound] = 240
-    # ws_display[:, :, 1][ws_bound] = 80
-    # ws_display[:, :, 2][ws_bound] = 80
-    #
-    # save_name = '/Users/nicholas/Desktop/seg_{}.png'
-    # mimg.imsave(save_name.format(np.random.randint(0, 100)), ws_display, format='png')
+    image_data = np.array([input_data[band_list[0]],
+                           input_data[band_list[1]],
+                           input_data[band_list[2]]],
+                          dtype=np.uint8)
+    ws_bound = segmentation.find_boundaries(segmented_data)
+    ws_display = utils.create_composite(image_data)
+
+    # save_name = '/Users/nicholas/Desktop/original_{}.png'
+    # mimg.imsave(save_name.format(np.random.randint(0,100)), ws_display, format='png')
+
+    ws_display[:, :, 0][ws_bound] = 240
+    ws_display[:, :, 1][ws_bound] = 80
+    ws_display[:, :, 2][ws_bound] = 80
+
+    save_name = '/Users/nicholas/Desktop/seg_{}.png'
+    mimg.imsave(save_name.format(np.random.randint(0, 100)), ws_display, format='png')
 
     return segmented_data
 

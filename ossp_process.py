@@ -180,8 +180,8 @@ def main():
         # Transfer the metadata from input image
         # dst_ds.SetMetadata(src_ds.GetMetadata())
         # Transfer the input projection
-        dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
-        dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
+        #dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
+        #dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
 
         # Find the appropriate image block read size
         block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
@@ -326,7 +326,6 @@ def process_block_queue(lock, block_queue, dst_queue, full_image_name,
         # Apply correction to block based on earlier histogram analysis (if applying correction)
         # Converts image to 8 bit by rescaling lower -> 1 and upper -> 255
         image_data = pp.rescale_band(image_data, lower, upper)
-        print(lower, upper)
         if white_balance:
             # Applies a white balance correction
             image_data = pp.white_balance(image_data, wb_reference, np.amax(wb_reference))

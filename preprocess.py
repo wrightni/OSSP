@@ -230,7 +230,6 @@ def find_peaks(hist, bin_centers):
     if hist[-1] >= hist[-2] and hist[-1] >= hist[-6]:
         peaks.append(bin_centers[-1])
 
-    print(peaks)
     num_peaks = len(peaks)
     distance = 5  # Initial distance threshold
     # One third the 'dynamic range' (radius from peak)
