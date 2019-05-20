@@ -179,9 +179,11 @@ def main():
 
         # Transfer the metadata from input image
         # dst_ds.SetMetadata(src_ds.GetMetadata())
-        # Transfer the input projection
-        #dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
-        #dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
+        # Transfer the input projection and geotransform if they are different than the default
+        if src_ds.GetGeoTransform() != (0, 1, 0, 0, 0, 1):
+            dst_ds.SetGeoTransform(src_ds.GetGeoTransform())  # sets same geotransform as input
+        if src_ds.GetProjection() != '':
+            dst_ds.SetProjection(src_ds.GetProjection())  # sets same projection as input
 
         # Find the appropriate image block read size
         block_size_x, block_size_y = utils.find_blocksize(x_dim, y_dim, desired_block_size)
