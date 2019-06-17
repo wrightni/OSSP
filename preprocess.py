@@ -152,6 +152,15 @@ def histogram_threshold(gdal_dataset, src_dtype):
     bp_reference = [0 for _ in range(band_count)]
     # Determine the input datatype
 
+    if src_dtype > 8:
+        max_bit = 2047
+        upper_limit = 0.25
+    else:
+        max_bit = 255
+        upper_limit = 0.8
+
+    total_peaks = 0
+
     # First for loop finds the threshold based on all bands
     for b in range(1, band_count + 1):
 
@@ -172,6 +181,7 @@ def histogram_threshold(gdal_dataset, src_dtype):
 
         # Find the strongest (3) peaks in the band histogram
         peaks = find_peaks(hist, bin_centers)
+        total_peaks += len(peaks)
         # Find the high and low threshold for rescaling image intensity
         lower_b, upper_b, auto_wb, auto_bpr = find_threshold(hist, bin_centers,
                                                             peaks, src_dtype)
@@ -184,6 +194,13 @@ def histogram_threshold(gdal_dataset, src_dtype):
             lower = lower_b
         if upper_b > upper:
             upper = upper_b
+
+    # If there are at least 2 peaks we don't need an upper limit, as the upper
+    #   limit is only to prevent open water only images from being stretched.
+    if total_peaks < 4:
+        max_range = int(max_bit * upper_limit)
+        if upper < max_range:
+            upper = max_range
 
     return lower, upper, wb_reference, bp_reference
 
@@ -333,10 +350,10 @@ def find_threshold(hist, bin_centers, peaks, src_dtype, top=0.15, bottom=0.5):
             lower = min_range
     # If there are at least 2 peaks we don't need an upper limit, as the upper
     #   limit is only to prevent open water only images from being stretched.
-    if len(peaks) < 2:
-        max_range = int(max_bit * upper_limit)
-        if upper < max_range:
-            upper = max_range
+    # if len(peaks) < 2:
+    #     max_range = int(max_bit * upper_limit)
+    #     if upper < max_range:
+    #         upper = max_range
 
     return lower, upper, auto_wb, auto_bpr
 
