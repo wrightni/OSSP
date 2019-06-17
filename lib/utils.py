@@ -112,7 +112,7 @@ def load_tds(file_name, list_name, image_type):
     RETURNS:
         tds = [label_vector, training_feature_matrix]
     '''
-    if image_type == 'srgb':
+    if image_type == 'srgb' and list_name != 'srgb':
         list_prefix = list_name + "_"
         label_name = "{}labels".format(list_prefix)
     else:

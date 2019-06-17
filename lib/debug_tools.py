@@ -110,7 +110,7 @@ def display_histogram(image_band):
 # Method to assess the training set and classification tree used for this classification
 def test_training(label_vector, training_feature_matrix):
 
-    print "Size of training set: %i" %len(label_vector)
+    print("Size of training set: %i" %len(label_vector))
     print(np.shape(training_feature_matrix))
 
     # Add a random number to the training data as a reference point
@@ -126,7 +126,7 @@ def test_training(label_vector, training_feature_matrix):
 
     rfc = RandomForestClassifier(n_estimators=100,oob_score=True)
     rfc.fit(training_feature_matrix, label_vector)
-    print "OOB Score: %f" %rfc.oob_score_
+    print("OOB Score: %f" %rfc.oob_score_)
 
     training_feature_matrix = np.array(training_feature_matrix)
     importances = rfc.feature_importances_

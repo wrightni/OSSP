@@ -71,8 +71,7 @@ def main():
     threads = args.threads
     verbose = args.verbose
     stretch = args.stretch
-    # White balance flag (To add as user option in future, presently only used on spring oib imagery)
-    white_balance = False
+
 
     # Use the given pansh script path, otherwise search for the correct folder
     #   in the same directory as this script.
@@ -83,10 +82,13 @@ def main():
         pansh_script_path = os.path.join(os.path.split(current_path)[0], 'imagery_utils')
 
     # For Ames OIB Processing:
+    # White balance flag (To add as user option in future, presently only used on oib imagery)
     if image_type == 'srgb':
         assess_quality = True
+        white_balance = True
     else:
         assess_quality = False
+        white_balance = False
     # Set a default quality score until this value is calculated
     quality_score = 1.
 
@@ -153,6 +155,10 @@ def main():
 
         # Load Training Data
         tds = utils.load_tds(tds_file, tds_label, image_type)
+        # tds = utils.load_tds(tds_file, 'srgb', image_type)
+
+        if verbose:
+            print("Size of training set: {}".format(len(tds[1])))
 
         # Set necessary parameters for reading image 1 block at a time
         x_dim = src_ds.RasterXSize

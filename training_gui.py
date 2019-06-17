@@ -754,7 +754,8 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
             # Rescale the input dataset using a histogram stretch and convert to the format
             #   needed by TrainingWindow
             # image_data = pp.rescale_band(image_data, lower, upper)
-            # image_data = pp.white_balance(image_data, wb_reference, np.amax(wb_reference))
+            wb_reference = np.array(wb_ref, dtype=np.float)
+            image_data = pp.white_balance(image_data, wb_reference, np.amax(wb_reference))
             # original_image = utils.create_composite([image_data[i, :, :] for i in range(0, num_bands)])
             original_image = np.ndarray.astype(image_data, c_uint8)
 
