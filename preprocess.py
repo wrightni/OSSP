@@ -181,6 +181,7 @@ def histogram_threshold(gdal_dataset, src_dtype):
 
         # Find the strongest (3) peaks in the band histogram
         peaks = find_peaks(hist, bin_centers)
+        # Tally the total number of peaks found across all bands
         total_peaks += len(peaks)
         # Find the high and low threshold for rescaling image intensity
         lower_b, upper_b, auto_wb, auto_bpr = find_threshold(hist, bin_centers,
@@ -195,9 +196,9 @@ def histogram_threshold(gdal_dataset, src_dtype):
         if upper_b > upper:
             upper = upper_b
 
-    # If there are at least 2 peaks we don't need an upper limit, as the upper
-    #   limit is only to prevent open water only images from being stretched.
-    if total_peaks < 4:
+    # If there is only a single peak per band, we need an upper limit. The upper
+    #   limit is to prevent open water only images from being stretched.
+    if total_peaks <= band_count:
         max_range = int(max_bit * upper_limit)
         if upper < max_range:
             upper = max_range
@@ -332,14 +333,11 @@ def find_threshold(hist, bin_centers, peaks, src_dtype, top=0.15, bottom=0.5):
     # 8 bit vs 11 bit (WorldView)
     # 256   or 2048
     # While WV images are 11bit, white ice tends to be ~600-800 intensity
-    # Provide a floor and ceiling to the amount of stretch allowed
-    # if len(peaks) < 3:
+    # Provide a floor to the amount of stretch allowed
     if src_dtype > 8:
         max_bit = 2047
-        upper_limit = 0.25
     else:
         max_bit = 255
-        upper_limit = 0.8
 
     # If the width of the lowest peak is less than 3% of the bit depth,
     #   then the lower peak is likely open water. 3% determined visually, but
@@ -348,12 +346,6 @@ def find_threshold(hist, bin_centers, peaks, src_dtype, top=0.15, bottom=0.5):
         min_range = int(max_bit * .08)
         if lower > min_range:
             lower = min_range
-    # If there are at least 2 peaks we don't need an upper limit, as the upper
-    #   limit is only to prevent open water only images from being stretched.
-    # if len(peaks) < 2:
-    #     max_range = int(max_bit * upper_limit)
-    #     if upper < max_range:
-    #         upper = max_range
 
     return lower, upper, auto_wb, auto_bpr
 
