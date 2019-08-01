@@ -2,13 +2,13 @@
 ## Open Source Sea-ice Processing
 ### Open Source Algorithm for Detecting Sea Ice Surface Features in High Resolution Optical Imagery
 
-### Nicholas Wright and Christopher Polashenski
+### Nicholas Wright and Chris Polashenski
 
 ## Introduction
 
 Welcome to OSSP; a set of tools for detecting surface features in high resolution optical imagery of sea ice. The primary focus is on the detection of and differentiation between open water, melt ponds, and snow/ice. 
 
-The Anaconda distribution of Python is recommended, but any distribution with the appropriate packages will work. You can download Anaconda, version 2.7, here: https://www.continuum.io/downloads
+The Anaconda distribution of Python is recommended, but any distribution with the appropriate packages will work. You can download Anaconda, version 3.6, here: https://www.continuum.io/downloads
 
 
 ## Dependencies
@@ -61,37 +61,6 @@ Example: ossp\_process.py input\_dir im\_type training\_dataset\_file -v
 This example will process all .tif and .jpg files in the input directory.
 
 
-### segment.py
-
-This script segments the image using an edge detection followed by watershed segmentation.
-
-#### Positional Arguments
-* __input_dir__: Directory path of the input image.
-* __filename__: Name of the segmented image file (Splitter output: .h5).
-
-#### Optional Arguments
-* __--output_dir__: Directory path for output files.
-* __--histogram__: Display histogram of pixel intensity values before segmentation.
-* __-c | --color__: Save a color (rgb) version of the input image.
-* __-t | --test__: Inspect segmentation results results before saving output files. 
-* __-v | --verbose__: Display text information and progress of the script.
-
-
-### classify.py
-
-Classified the segmented image (output of segment.py) using a Random Forest machine learning algorithm. Training data can be created on a segmented image using the GUI in training_gui.py. 
-
-#### Positional Arguments
-* __input\_filename__: Directory and filename of image watersheds to be classified.
-* __training\_dataset__: Directory and filename of the training dataset (.h5)
-* __training\_label__: name of training classification list
-
-#### Optional Arguments
-* __-q | --quality__: Display a quality assessment (OOB score and attribute importance) of the training dataset.
-* __--debug__: Display one classified subimage at a time, with the option of quitting after each.
-* __-v | --verbose__: Display text information and progress of the script.
-
-
 ### training_gui.py
 
 #### Positional Arguments:
@@ -100,11 +69,9 @@ Classified the segmented image (output of segment.py) using a Random Forest mach
   1. 'srgb': RGB imagery taken by a typical camera
   2. 'wv02_ms': DigitalGlobe WorldView 2 multispectral imagery,
   3. 'pan': High resolution panchromatic imagery
-* __-m | --mode__: {1,2}. How you would like to the training GUI. 1: create a training dataset from folder of raw images. 2: assess the accuracy of a classified image (output of RandomForest.py).
 
 #### Optional arguments:
 * __--tds_file__: Only used for mode 1. Existing training dataset file. Will create a new one with this name if none exists. *Default = <image_type>\_training\_data.h5*.
-* __-s | --splits__: The number of times to split the input image for improved processing speed. This is rounded to the nearest square number. *Default = 9*.
 
 
 ### Contact
