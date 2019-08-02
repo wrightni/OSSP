@@ -170,9 +170,12 @@ def main():
         if stretch == 'hist':
             stretch_params = pp.histogram_threshold(src_ds, src_dtype)
         else:  # stretch == 'none':
+            # WV Images are actually 11bit stored in 16bit files
+            if src_dtype > 12:
+                src_dtype = 11
             stretch_params = [1, 2**src_dtype - 1,
                               [2 ** src_dtype - 1 for _ in range(src_ds.RasterCount)],
-                              [0 for _ in range(src_ds.RasterCount)]]
+                              [1 for _ in range(src_ds.RasterCount)]]
 
         # Create a blank output image dataset
         # Save the classified image output as a geotiff

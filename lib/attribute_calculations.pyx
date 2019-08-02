@@ -56,6 +56,7 @@ def analyze_srgb_image(input_image, watershed_image, segment_id=False):
             fm_view[ws, b+3] = variance**(1./2)
 
         # See Miao et al for band ratios
+        # Division by zero is not possible because fm_view[ws,0:3] have a forced min of 1
         # Band Ratio 1
         fm_view[ws, 6] = ((fm_view[ws, 2] - fm_view[ws, 0]) /
                        (fm_view[ws, 2] + fm_view[ws, 0]))

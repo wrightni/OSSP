@@ -21,6 +21,9 @@ def rescale_band(band, bottom, top):
     imin, imax = (bottom, top)
     omin, omax = (1, 255)
 
+    # Rescale intensity takes a uint16 dtype input
+    band = band.astype(np.uint16)
+
     return rescale_intensity.rescale_intensity(band, imin, imax, omin, omax)
 
 

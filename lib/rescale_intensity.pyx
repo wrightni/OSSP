@@ -14,7 +14,7 @@ def white_balance(src_ds, reference, double imax):
     cdef int x, y, b
     cdef int x_dim, y_dim, num_bands
     cdef float val
-    cdef unsigned int new_val
+    cdef unsigned char new_val
 
     cdef unsigned char [:, :, :] src_view = src_ds
     dst_ds = np.empty_like(src_ds)
@@ -55,15 +55,17 @@ def rescale_intensity(src_ds, int imin, int imax, int omin, int omax):
 
 def _rescale_intensity_3d(src_ds, int imin, int imax, int omin, int omax):
     '''
-    Rescales the input image intensity values
+    Rescales the input image intensity values.
+    While omin and omax are arguments, this function currently only converts
+    to uint8
     '''
     cdef int x, y, b
     cdef int x_dim, y_dim, num_bands
     cdef float val
     cdef unsigned char new_val
 
-    cdef unsigned char [:, :, :] src_view = src_ds
-    dst_ds = np.empty_like(src_ds)
+    cdef unsigned short [:, :, :] src_view = src_ds
+    dst_ds = np.empty_like(src_ds, dtype=c_uint8)
     cdef unsigned char [:, :, :] dst_view = dst_ds
 
     num_bands, x_dim, y_dim = np.shape(src_ds)
@@ -88,14 +90,16 @@ def _rescale_intensity_3d(src_ds, int imin, int imax, int omin, int omax):
 def _rescale_intensity_2d(src_ds, int imin, int imax, int omin, int omax):
     '''
     Rescales the input image intensity values
+    While omin and omax are arguments, this function currently only converts
+    to uint8
     '''
     cdef int x, y, b
     cdef int x_dim, y_dim, num_bands
     cdef float val
     cdef unsigned char new_val
 
-    cdef unsigned char [:, :] src_view = src_ds
-    dst_ds = np.empty_like(src_ds)
+    cdef unsigned short [:, :] src_view = src_ds
+    dst_ds = np.empty_like(src_ds, dtype=c_uint8)
     cdef unsigned char [:, :] dst_view = dst_ds
 
     x_dim, y_dim = np.shape(src_ds)
