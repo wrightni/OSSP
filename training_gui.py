@@ -6,9 +6,13 @@
 #        melt ponds, sea ice, or open water to use as a training data set for a 
 #        Random Forest Classification method. 
 
-
+# Python 3:
 import tkinter as tk
-import tkinter.font
+from tkinter.font import Font
+# Python 2:
+# import Tkinter as tk
+# from tkFont import Font
+#
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
@@ -631,7 +635,7 @@ def load_data(input_file):
 # or to continue building on an existing list. 
 def welcome_gui(input_file, segment_list):
     master = tk.Tk()
-    master_font = tkinter.font.Font(family="Times New Roman", size=16)
+    master_font = Font(family="Times New Roman", size=16)
     master['bg'] = 'white'
     master.title("Image Classifier")
 
@@ -712,9 +716,6 @@ def mode_one(segment_list, label_vector, feature_matrix, input_directory, im_typ
                 image_name = os.path.split(next_image)[1]
                 # if image_name in to_skip:
                 #     print(("Skipping image: {}".format(image_name)))
-                #     continue
-                # if image_name not in target_images:
-                #     print(("Skipping {}".format(image_name)))
                 #     continue
             # Otherwise find the image name from the next unlabeled segment
             else:
