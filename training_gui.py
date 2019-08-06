@@ -379,8 +379,6 @@ class DataManager:
         self.wb_ref = np.array(wb_ref, dtype=c_uint8)
         self.br_ref = np.array(br_ref, dtype=c_uint8)
 
-        # Print for debugging
-        print((lower, upper))
         # Load the image data
         image_data = src_ds.ReadAsArray()
 
@@ -620,7 +618,7 @@ class EventManager:
 
         # Assigning the highlighted segment a classification
         segment_id = int(self.parent.data.get_current_segment()[1])
-        print(segment_id)
+        print("Segment ID: {}".format(segment_id))
         # Note that we classified one more image
         if key_press == "snow":
             self.parent.data.append_label(1)
