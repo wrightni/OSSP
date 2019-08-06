@@ -8,11 +8,8 @@
 
 # Python 3:
 import tkinter as tk
-from tkinter.font import Font
 # Python 2:
 # import Tkinter as tk
-# from tkFont import Font
-#
 import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
@@ -26,7 +23,6 @@ import gdal
 from sklearn.ensemble import RandomForestClassifier
 from select import select
 import sys
-import time
 import preprocess as pp
 from segment import segment_image
 from lib import utils
