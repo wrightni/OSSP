@@ -14,6 +14,7 @@ def white_balance(src_ds, reference, double imax):
     cdef int x, y, b
     cdef int x_dim, y_dim, num_bands
     cdef float val
+    cdef unsigned short new_val_short
     cdef unsigned char new_val
 
     cdef unsigned char [:, :, :] src_view = src_ds
@@ -34,11 +35,13 @@ def white_balance(src_ds, reference, double imax):
                 if val == 0:
                     new_val = 0
                 else:
-                    new_val = int((imax / ref_view[b]) * val)
-                    if new_val < 1:
+                    new_val_short = int((imax / ref_view[b]) * val)
+                    if new_val_short < 1:
                         new_val = 1
-                    elif new_val > 255:
+                    elif new_val_short > 255:
                         new_val = 255
+                    else:
+                        new_val = new_val_short
                 dst_view[b, x, y] = new_val
 
     return np.copy(dst_view)

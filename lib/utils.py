@@ -122,8 +122,14 @@ def load_tds(file_name, list_name, image_type):
 
     ## Load the training data
     with h5py.File(file_name, 'r') as training_file:
-        label_vector = training_file[label_name][:]
-        training_feature_matrix = training_file['{}feature_matrix'.format(list_prefix)][:]
+        # Try loading the dataset with the provided name. If that doesnt work,
+        #   try loading with the default name
+        if label_name in training_file.keys():
+            label_vector = training_file[label_name][:]
+            training_feature_matrix = training_file['{}feature_matrix'.format(list_prefix)][:]
+        else:
+            label_vector = training_file[image_type][:]
+            training_feature_matrix = training_file['feature_matrix'][:]
 
     ## Convert inputs to python lists
     label_vector = label_vector.tolist()
