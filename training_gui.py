@@ -184,8 +184,11 @@ class ImageDisplay(tk.Frame):
         welcome_text = "No images have been loaded. Press <Initialize Image> to begin."
         tds_text = "Training data file: \n {}".format(self.parent.data.tds_filename)
         image_text = "Images found: \n"
-        for im in self.parent.data.available_images:
-            image_text += im + '\n'
+        if len(self.parent.data.available_images) == 0:
+            image_text += 'None'
+        else:
+            for im in self.parent.data.available_images:
+                image_text += im + '\n'
 
         # Creates a image placeholder while the data is being loaded.
         ax = self.fig.add_subplot(2, 1, 1, adjustable='datalim', frame_on=False)
@@ -792,6 +795,9 @@ class EventManager:
         self.next_segment()
 
     def initialize_image(self):
+        if len(self.parent.data.available_images) == 0:
+            print("No images to load!")
+            return
         # Check to make sure no data has been loaded
         if self.parent.data.im_name is not None:
             return
@@ -961,7 +967,7 @@ if __name__ == "__main__":
 
     # Parse Arguments
     args = parser.parse_args()
-    input_dir = args.input
+    input_dir = os.path.abspath(args.input)
     image_type = args.image_type
     autorun_flag = args.enable_autorun
 
